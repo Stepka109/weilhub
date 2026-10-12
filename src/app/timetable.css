@@ -1,0 +1,147 @@
+/* ==========================================================================
+   Rozvrh – vzhled převzatý z Family Station (mřížka ve stylu Bakalářů),
+   přizpůsobený barvám a písmu WeilHubu. Stavy:
+   S = změna/suplování, M = změna místnosti, A = akce, O = odpadá,
+   N = nová hodina, V = volno/svátek.
+   ========================================================================== */
+.wh-tt {
+  --tt-grid: #dfe6ef;
+  --tt-cell: #eef4fb;
+  --tt-cell-border: #cdd9e8;
+  --tt-red: #db2d2d;
+  --tt-green: #4f9a12;
+  --tt-purple: #7c4ddc;
+  --tt-orange: #ff8a00;
+  --tt-col: 96px;
+  --tt-day: 76px;
+  --tt-row: 96px;
+}
+.wh-tt-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--wh-radius-card);
+  border: 1px solid var(--wh-border);
+  background: var(--wh-card);
+  box-shadow: var(--wh-shadow-card);
+}
+.wh-tt table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+.wh-tt th, .wh-tt td { border: 1px solid var(--tt-grid); }
+.wh-tt tr > :first-child { border-left: 0; }
+.wh-tt tr > :last-child { border-right: 0; }
+.wh-tt thead th { border-top: 0; }
+.wh-tt tbody tr:last-child > * { border-bottom: 0; }
+.wh-tt thead th {
+  height: 58px;
+  padding: 6px 8px; background: var(--wh-card);
+  font-family: var(--font-display); font-size: .9rem; font-weight: 700; color: var(--wh-text);
+}
+.wh-tt thead th small { display: block; margin-top: 4px; font-family: var(--font-sans); font-size: .7rem; font-weight: 500; color: var(--wh-muted); white-space: nowrap; }
+.wh-tt .tt-day {
+  position: sticky; left: 0; z-index: 6;
+  width: var(--tt-day); min-width: var(--tt-day); max-width: var(--tt-day);
+  padding: 6px; background: var(--wh-card); text-align: center;
+  font-family: var(--font-display); font-weight: 700; color: var(--wh-text);
+  box-shadow: 1px 0 0 var(--tt-grid);
+}
+.wh-tt .tt-day small { display: block; margin-top: 3px; font-family: var(--font-sans); font-size: .7rem; font-weight: 500; color: var(--wh-muted); }
+.wh-tt .tt-day.is-today, .wh-tt .tt-day.is-today small { color: var(--wh-blue); }
+.wh-tt button.tt-day-btn { width: 100%; height: 100%; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; }
+.wh-tt button.tt-day-btn:hover { background: var(--wh-light-blue); }
+.wh-tt thead .tt-day { z-index: 7; }
+.wh-tt td.tt-cell {
+  position: relative; height: var(--tt-row); padding: 6px;
+  background: var(--wh-card); vertical-align: middle; text-align: center;
+}
+.wh-tt td.tt-cell.is-today { background: #f6f9ff; }
+.wh-tt .tt-card {
+  position: relative; height: 100%; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 6px 8px; border-radius: 10px;
+  background: var(--tt-cell); border: 1px solid var(--tt-cell-border);
+  cursor: pointer; transition: transform 150ms ease, box-shadow 150ms ease;
+  font: inherit; color: inherit;
+}
+.wh-tt button.tt-card:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(20, 33, 61, .35); }
+.wh-tt .tt-code {
+  font-family: var(--font-display); font-size: 1.12rem; line-height: 1.05; font-weight: 800; color: var(--wh-text);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wh-tt .tt-room { font-size: .74rem; color: var(--wh-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wh-tt .tt-empty-add {
+  height: 100%; width: 100%; display: grid; place-items: center;
+  border: 2px dashed transparent; border-radius: 10px; background: transparent;
+  color: transparent; cursor: pointer; transition: 150ms;
+}
+.wh-tt .tt-empty-add:hover, .wh-tt .tt-empty-add:focus-visible { border-color: var(--tt-cell-border); color: var(--wh-muted); }
+
+/* stavové štítky vlevo */
+.wh-tt .tt-tag {
+  position: absolute; left: -1px; top: 50%; transform: translateY(-50%);
+  min-width: 21px; height: 24px; padding: 0 4px;
+  display: grid; place-items: center; border-radius: 0 6px 6px 0;
+  color: #fff; font-size: .72rem; font-weight: 800; box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+}
+.wh-tt .st-changed { background: #fff; border: 3px solid var(--tt-red); }
+.wh-tt .st-changed .tt-tag { background: var(--tt-red); }
+.wh-tt .st-roomchanged { background: #fff; border: 3px dashed var(--tt-red); }
+.wh-tt .st-roomchanged .tt-tag { background: var(--tt-red); }
+.wh-tt .st-roomchanged .tt-room { color: var(--tt-red); font-weight: 700; }
+.wh-tt .st-cancelled { background: #fff; border: 3px dashed var(--tt-red); }
+.wh-tt .st-cancelled .tt-tag { background: var(--tt-red); }
+.wh-tt .st-cancelled .tt-code, .wh-tt .st-cancelled .tt-room { color: #8a949a; text-decoration: line-through; }
+.wh-tt .st-cancelled.st-cancelled-green { border: 2px dashed var(--tt-green); }
+.wh-tt .st-cancelled.st-cancelled-green .tt-tag { background: var(--tt-green); }
+.wh-tt .st-event { background: #fff; border: 2px dashed var(--tt-green); }
+.wh-tt .st-event .tt-tag { background: var(--tt-green); }
+.wh-tt .st-new { background: #fff; border: 2px solid var(--tt-green); }
+.wh-tt .tt-badge-n {
+  position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--tt-green); color: #fff; font-size: 10px; font-weight: 800;
+}
+.wh-tt .is-now { box-shadow: inset 0 0 0 2px var(--tt-orange); }
+
+/* celodenní záznam a vícehodinová akce */
+.wh-tt td.tt-wide { position: relative; height: var(--tt-row); padding: 6px; background: var(--wh-card); }
+.wh-tt .tt-wide-card {
+  position: relative; height: 100%; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px 28px; border-radius: 10px; background: #fff; border: 3px solid var(--tt-purple);
+  cursor: pointer; font: inherit; color: inherit;
+}
+.wh-tt .tt-wide-card.is-event { border: 2px dashed var(--tt-green); }
+.wh-tt .tt-wide-card .tt-tag { background: var(--tt-purple); }
+.wh-tt .tt-wide-card.is-event .tt-tag { background: var(--tt-green); }
+.wh-tt .tt-wide-label { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; max-width: 100%; }
+.wh-tt .tt-wide-label.is-sticky { position: sticky; left: calc(var(--tt-day) + 28px); right: 28px; }
+.wh-tt .tt-wide-label strong {
+  font-family: var(--font-display); font-size: 1rem; font-weight: 800; color: var(--wh-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.wh-tt .tt-wide-label span { font-size: .72rem; color: var(--wh-muted); }
+.wh-tt td.tt-outside { background: repeating-linear-gradient(135deg, #fafbfd 0 8px, #f3f6fa 8px 16px); }
+
+/* legenda */
+.tt-legend-dot { width: 16px; height: 16px; border-radius: 5px; background: #eef4fb; border: 1px solid #cdd9e8; flex: 0 0 auto; }
+.tt-legend-dot.st-changed { background: #fff; border: 2px solid #db2d2d; }
+.tt-legend-dot.st-roomchanged, .tt-legend-dot.st-cancelled { background: #fff; border: 2px dashed #db2d2d; }
+.tt-legend-dot.st-event { background: #fff; border: 2px dashed #4f9a12; }
+.tt-legend-dot.st-new { background: #fff; border: 2px solid #4f9a12; }
+.tt-legend-dot.st-holiday { background: #fff; border: 2px solid #7c4ddc; }
+
+@media (max-width: 767px) {
+  .wh-tt { --tt-col: 88px; --tt-day: 52px; --tt-row: 78px; }
+  .wh-tt thead th { height: 48px; padding: 4px; font-size: .78rem; }
+  .wh-tt thead th small { font-size: .58rem; margin-top: 3px; }
+  .wh-tt .tt-day { font-size: .82rem; padding: 4px 2px; }
+  .wh-tt .tt-day small { font-size: .58rem; }
+  .wh-tt td.tt-cell, .wh-tt td.tt-wide { padding: 4px; }
+  .wh-tt .tt-card { padding: 4px 6px; border-radius: 8px; gap: 2px; }
+  .wh-tt .tt-code { font-size: .92rem; }
+  .wh-tt .tt-room { font-size: .62rem; }
+  .wh-tt .tt-tag { min-width: 17px; height: 20px; font-size: .62rem; }
+  .wh-tt .st-changed, .wh-tt .st-roomchanged, .wh-tt .st-cancelled { border-width: 2px; }
+  .wh-tt .tt-wide-card { padding: 4px 22px; border-width: 2px; }
+  .wh-tt .tt-wide-label.is-sticky { left: calc(var(--tt-day) + 22px); right: 22px; }
+  .wh-tt .tt-wide-label strong { font-size: .86rem; }
+}

@@ -1,0 +1,26 @@
+# Konfigurace Supabase CLI (lokální vývoj a `supabase db push`).
+# Hodnoty, které zde nejsou, používají výchozí nastavení CLI.
+project_id = "weilhub"
+
+[db]
+major_version = 17
+
+[db.seed]
+# Demonstrační obsah – pouze pro lokální `supabase db reset`
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+
+[auth.rate_limit]
+email_sent = 4
+sign_in_sign_ups = 30
+token_verifications = 30
