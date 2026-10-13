@@ -9,7 +9,6 @@ import { Highlight } from "@tiptap/extension-highlight";
 import { Placeholder } from "@tiptap/extensions";
 import { Superscript } from "@tiptap/extension-superscript";
 import { Subscript } from "@tiptap/extension-subscript";
-import { migrateMathStrings } from "@tiptap/extension-mathematics";
 import {
   Bold,
   Code2,
@@ -43,6 +42,7 @@ import { IMAGE_EXTS, acceptAttribute } from "@/lib/files";
 import { cn } from "@/lib/utils";
 import { FormulaDialog } from "./formula-dialog";
 import { createInlineMath } from "./math-extension";
+import { convertTextFormulas, findTextFormulas } from "./math-convert";
 import type { TiptapNode } from "@/lib/types";
 
 function ToolButton({
@@ -275,9 +275,26 @@ export function RichTextEditor({
       attributes: { class: "prose-wh px-5 py-5 sm:px-8 sm:py-7", "aria-label": "Obsah zápisu", role: "textbox", "aria-multiline": "true" },
     },
     onUpdate: ({ editor: e }) => onChange(e.getJSON() as TiptapNode),
-    // Starší zápisy se vzorci napsanými jako text „$…$“ se převedou na vykreslené vzorce
-    onCreate: ({ editor: e }) => migrateMathStrings(e),
   });
+
+  // Vzorce napsané jako text „$…$“ (např. vložené odjinud) – nabídneme převod
+  const subscribeFormulas = React.useCallback(
+    (cb: () => void) => {
+      if (!editor) return () => {};
+      editor.on("transaction", cb);
+      editor.on("create", cb);
+      return () => {
+        editor.off("transaction", cb);
+        editor.off("create", cb);
+      };
+    },
+    [editor],
+  );
+  const textFormulas = React.useSyncExternalStore(
+    subscribeFormulas,
+    () => (editor && !editor.isDestroyed ? findTextFormulas(editor).length : 0),
+    () => 0,
+  );
 
   function saveFormula(latex: string) {
     if (!editor) return;
@@ -314,6 +331,28 @@ export function RichTextEditor({
         />
       ) : (
         <div className="h-12 rounded-t-[20px] border-b border-line" />
+      )}
+      {editor && textFormulas > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-light-blue/50 px-5 py-3 sm:px-8" role="status">
+          <span className="flex items-center gap-2 text-sm text-ink">
+            <Sigma className="size-4 shrink-0 text-primary" aria-hidden />
+            {textFormulas === 1
+              ? "V zápisu je 1 vzorec napsaný jako text ($…$). Převést ho na vykreslený vzorec?"
+              : textFormulas < 5
+                ? `V zápisu jsou ${textFormulas} vzorce napsané jako text ($…$). Převést je na vykreslené vzorce?`
+                : `V zápisu je ${textFormulas} vzorců napsaných jako text ($…$). Převést je na vykreslené vzorce?`}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const n = convertTextFormulas(editor);
+              if (n) toast.success(n === 1 ? "Vzorec byl převeden." : `Převedeno vzorců: ${n}.`);
+            }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover"
+          >
+            Převést
+          </button>
+        </div>
       )}
       <EditorContent editor={editor} />
       <FormulaDialog
