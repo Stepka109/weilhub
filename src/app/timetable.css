@@ -145,3 +145,16 @@
   .wh-tt .tt-wide-label.is-sticky { left: calc(var(--tt-day) + 22px); right: 22px; }
   .wh-tt .tt-wide-label strong { font-size: .86rem; }
 }
+
+/* ==========================================================================
+   Vzorce (KaTeX), horní a dolní index v zápisech
+   ========================================================================== */
+.prose-wh sup, .prose-wh sub { font-size: .75em; line-height: 0; }
+.prose-wh .katex { font-size: 1.08em; }
+.prose-wh .wh-math-block { margin: 1em 0; overflow-x: auto; overflow-y: hidden; }
+.prose-wh .katex-display { margin: 0; }
+.tiptap-mathematics-render { padding: 0 2px; border-radius: 6px; }
+.tiptap-mathematics-render--editable { cursor: pointer; transition: background-color 150ms; }
+.tiptap-mathematics-render--editable:hover { background: var(--wh-light-blue); }
+.tiptap-mathematics-render.ProseMirror-selectednode { outline: 2px solid var(--wh-blue); }
+.inline-math-error { color: var(--tt-red, #db2d2d); font-family: ui-monospace, Consolas, monospace; }

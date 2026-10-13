@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { Toaster } from "sonner";
 import { ServiceWorkerRegistration } from "@/components/layout/sw-register";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 import "./timetable.css";
 

@@ -6,6 +6,7 @@
  * escapuje veškerý text, propouští jen povolené uzly/značky a validuje URL.
  */
 import type { TiptapNode } from "./types";
+import { INLINE_MATH_IN_TEXT, renderLatex } from "./math";
 
 const ESCAPES: Record<string, string> = {
   "&": "&amp;",
@@ -39,8 +40,22 @@ export function safeImageSrc(src: unknown): string | null {
 
 const ALIGN = new Set(["left", "center", "right", "justify"]);
 
+/** Text s případnými vzorci „$…$“ – text se escapuje, vzorce vykreslí KaTeX (bez skriptů a odkazů). */
+function renderTextWithMath(text: string): string {
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(INLINE_MATH_IN_TEXT)) {
+    const rendered = renderLatex(m[1]);
+    if (!rendered) continue;
+    out += escapeHtml(text.slice(last, m.index)) + rendered;
+    last = m.index! + m[0].length;
+  }
+  return out + escapeHtml(text.slice(last));
+}
+
 function renderMarks(text: string, marks: TiptapNode["marks"]): string {
-  let html = escapeHtml(text);
+  const isCode = (marks ?? []).some((m) => m.type === "code");
+  let html = isCode ? escapeHtml(text) : renderTextWithMath(text);
   for (const mark of marks ?? []) {
     switch (mark.type) {
       case "bold":
@@ -60,6 +75,12 @@ function renderMarks(text: string, marks: TiptapNode["marks"]): string {
         break;
       case "highlight":
         html = `<mark>${html}</mark>`;
+        break;
+      case "superscript":
+        html = `<sup>${html}</sup>`;
+        break;
+      case "subscript":
+        html = `<sub>${html}</sub>`;
         break;
       case "link": {
         const href = safeHref(mark.attrs?.href);
@@ -125,6 +146,14 @@ function renderNode(node: TiptapNode, depth = 0): string {
       return "<hr />";
     case "hardBreak":
       return "<br />";
+    case "inlineMath": {
+      const latex = typeof node.attrs?.latex === "string" ? node.attrs.latex : "";
+      return `<span class="wh-math">${renderLatex(latex) || escapeHtml(latex)}</span>`;
+    }
+    case "blockMath": {
+      const latex = typeof node.attrs?.latex === "string" ? node.attrs.latex : "";
+      return `<div class="wh-math-block">${renderLatex(latex, true) || escapeHtml(latex)}</div>`;
+    }
     case "image": {
       const src = safeImageSrc(node.attrs?.src);
       if (!src) return "";
@@ -168,6 +197,7 @@ export function tiptapToText(doc: TiptapNode | null | undefined, limit = 50_000)
     if (depth > 60) return;
     if (n.type === "text" && n.text) parts.push(n.text);
     if (n.type === "hardBreak") parts.push(" ");
+    if ((n.type === "inlineMath" || n.type === "blockMath") && typeof n.attrs?.latex === "string") parts.push(` ${n.attrs.latex} `);
     for (const c of n.content ?? []) walk(c, depth + 1);
     if (BLOCK_TYPES.has(n.type)) parts.push(" ");
   };

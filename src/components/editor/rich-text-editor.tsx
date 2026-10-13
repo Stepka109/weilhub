@@ -7,6 +7,9 @@ import { TableKit } from "@tiptap/extension-table";
 import { Image } from "@tiptap/extension-image";
 import { Highlight } from "@tiptap/extension-highlight";
 import { Placeholder } from "@tiptap/extensions";
+import { Superscript } from "@tiptap/extension-superscript";
+import { Subscript } from "@tiptap/extension-subscript";
+import { migrateMathStrings } from "@tiptap/extension-mathematics";
 import {
   Bold,
   Code2,
@@ -24,7 +27,10 @@ import {
   Pilcrow,
   Quote,
   Redo2,
+  Sigma,
   Strikethrough,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
   Table2,
   Underline as UnderlineIcon,
   Undo2,
@@ -35,6 +41,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { safeHref } from "@/lib/tiptap";
 import { IMAGE_EXTS, acceptAttribute } from "@/lib/files";
 import { cn } from "@/lib/utils";
+import { FormulaDialog } from "./formula-dialog";
+import { createInlineMath } from "./math-extension";
 import type { TiptapNode } from "@/lib/types";
 
 function ToolButton({
@@ -71,7 +79,17 @@ function ToolButton({
 
 const Divider = () => <span className="mx-1 h-6 w-px shrink-0 bg-line" aria-hidden />;
 
-function Toolbar({ editor, onImage, uploading }: { editor: Editor; onImage?: () => void; uploading: boolean }) {
+function Toolbar({
+  editor,
+  onImage,
+  onFormula,
+  uploading,
+}: {
+  editor: Editor;
+  onImage?: () => void;
+  onFormula: () => void;
+  uploading: boolean;
+}) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -80,6 +98,8 @@ function Toolbar({ editor, onImage, uploading }: { editor: Editor; onImage?: () 
       underline: e.isActive("underline"),
       strike: e.isActive("strike"),
       highlight: e.isActive("highlight"),
+      sup: e.isActive("superscript"),
+      sub: e.isActive("subscript"),
       h1: e.isActive("heading", { level: 1 }),
       h2: e.isActive("heading", { level: 2 }),
       h3: e.isActive("heading", { level: 3 }),
@@ -141,6 +161,16 @@ function Toolbar({ editor, onImage, uploading }: { editor: Editor; onImage?: () 
       </ToolButton>
       <ToolButton label="Zvýraznění" active={s.highlight} onClick={() => chain().toggleHighlight().run()}>
         <Highlighter />
+      </ToolButton>
+      <Divider />
+      <ToolButton label="Horní index – mocnina (x²)" active={s.sup} onClick={() => chain().toggleSuperscript().run()}>
+        <SuperscriptIcon />
+      </ToolButton>
+      <ToolButton label="Dolní index (H₂O)" active={s.sub} onClick={() => chain().toggleSubscript().run()}>
+        <SubscriptIcon />
+      </ToolButton>
+      <ToolButton label="Vzorec – zlomek, odmocnina… ($…$)" onClick={onFormula}>
+        <Sigma />
       </ToolButton>
       <Divider />
       <ToolButton label="Odrážky" active={s.bullet} onClick={() => chain().toggleBulletList().run()}>
@@ -222,6 +252,8 @@ export function RichTextEditor({
 }) {
   const fileInput = React.useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [formula, setFormula] = React.useState<{ latex: string; pos: number | null } | null>(null);
+  const mathExtension = React.useMemo(() => createInlineMath((latex, pos) => setFormula({ latex, pos })), []);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -233,6 +265,9 @@ export function RichTextEditor({
       TableKit.configure({ table: { resizable: false } }),
       Image.configure({ inline: false, allowBase64: false }),
       Highlight,
+      Superscript,
+      Subscript,
+      mathExtension,
       Placeholder.configure({ placeholder }),
     ],
     content: value ?? { type: "doc", content: [{ type: "paragraph" }] },
@@ -240,7 +275,19 @@ export function RichTextEditor({
       attributes: { class: "prose-wh px-5 py-5 sm:px-8 sm:py-7", "aria-label": "Obsah zápisu", role: "textbox", "aria-multiline": "true" },
     },
     onUpdate: ({ editor: e }) => onChange(e.getJSON() as TiptapNode),
+    // Starší zápisy se vzorci napsanými jako text „$…$“ se převedou na vykreslené vzorce
+    onCreate: ({ editor: e }) => migrateMathStrings(e),
   });
+
+  function saveFormula(latex: string) {
+    if (!editor) return;
+    if (formula?.pos != null) {
+      editor.chain().setNodeSelection(formula.pos).updateInlineMath({ latex, pos: formula.pos }).focus().run();
+    } else {
+      editor.chain().focus().insertInlineMath({ latex }).run();
+    }
+    setFormula(null);
+  }
 
   async function insertImage(file: File) {
     if (!editor || !onUploadImage) return;
@@ -259,11 +306,27 @@ export function RichTextEditor({
   return (
     <div className="tiptap-editor rounded-card border border-line bg-card shadow-card focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
       {editor ? (
-        <Toolbar editor={editor} uploading={uploading} onImage={onUploadImage ? () => fileInput.current?.click() : undefined} />
+        <Toolbar
+          editor={editor}
+          uploading={uploading}
+          onImage={onUploadImage ? () => fileInput.current?.click() : undefined}
+          onFormula={() => setFormula({ latex: "", pos: null })}
+        />
       ) : (
         <div className="h-12 rounded-t-[20px] border-b border-line" />
       )}
       <EditorContent editor={editor} />
+      <FormulaDialog
+        open={!!formula}
+        initial={formula?.latex ?? ""}
+        editing={formula?.pos != null}
+        onClose={() => setFormula(null)}
+        onSave={saveFormula}
+        onDelete={() => {
+          if (editor && formula?.pos != null) editor.chain().focus().deleteRange({ from: formula.pos, to: formula.pos + 1 }).run();
+          setFormula(null);
+        }}
+      />
       {onUploadImage && (
         <input
           ref={fileInput}

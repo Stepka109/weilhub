@@ -157,6 +157,39 @@ describe("bezpečné vykreslení zápisů", () => {
   });
 });
 
+describe("vzorce, horní a dolní index", () => {
+  it("vykreslí zlomek z uzlu i z textu $…$ a horní/dolní index", () => {
+    const html = renderTiptapHtml({
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "inlineMath", attrs: { latex: "\\frac{m_s}{m}" } }] },
+        { type: "paragraph", content: [{ type: "text", text: "w = $\\frac{250}{1250}$ = 0,2" }] },
+        { type: "paragraph", content: [{ type: "text", text: "H" }, { type: "text", text: "2", marks: [{ type: "subscript" }] }, { type: "text", text: "O, x" }, { type: "text", text: "2", marks: [{ type: "superscript" }] }] },
+      ],
+    });
+    expect(html).toContain('class="katex"');
+    expect(html).toContain("mfrac");
+    expect(html).toContain("<sub>2</sub>");
+    expect(html).toContain("<sup>2</sup>");
+    expect(html).toContain("w = ");
+  });
+
+  it("vzorec nesmí vložit odkaz ani skript", () => {
+    const html = renderTiptapHtml({
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "inlineMath", attrs: { latex: "\\href{javascript:alert(1)}{x}" } }] },
+        { type: "paragraph", content: [{ type: "text", text: "$<img src=x onerror=alert(1)>$" }] },
+      ],
+    });
+    expect(html).not.toMatch(/<a |javascript:|<img/);
+  });
+
+  it("částky typu $5$ nechá jako text", () => {
+    expect(renderTiptapHtml({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Cena $5$" }] }] })).toBe("<p>Cena $5$</p>");
+  });
+});
+
 describe("pomocné funkce", () => {
   it("slug bez diakritiky", () => {
     expect(slugify("Tvorba webových stránek")).toBe("tvorba-webovych-stranek");
