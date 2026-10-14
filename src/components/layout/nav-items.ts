@@ -27,17 +27,17 @@ export interface NavItem {
 
 export const PORTAL_NAV: NavItem[] = [
   { href: "/", label: "Domů", icon: House, anim: "bounce" },
+  { href: "/testy", label: "Testy", icon: FileCheck, anim: "wiggle", prefix: true },
   { href: "/predmety", label: "Předměty", icon: BookOpen, anim: "pop", prefix: true },
   { href: "/materialy", label: "Materiály", icon: FolderOpen, anim: "bounce", prefix: true },
   { href: "/ukoly", label: "Úkoly", icon: ClipboardCheck, anim: "pop", prefix: true },
-  { href: "/testy", label: "Testy", icon: FileCheck, anim: "wiggle", prefix: true },
   { href: "/rozvrh", label: "Rozvrh", icon: CalendarDays, anim: "bounce", prefix: true },
   { href: "/kalendar", label: "Kalendář", icon: CalendarRange, anim: "pop", prefix: true },
   { href: "/oznameni", label: "Oznámení", icon: Bell, anim: "bell", prefix: true },
   { href: "/odkazy", label: "Důležité odkazy", icon: Link2, anim: "wiggle", prefix: true },
 ];
 
-export const MOBILE_PRIMARY = ["/", "/predmety", "/ukoly", "/rozvrh"];
+export const MOBILE_PRIMARY = ["/", "/testy", "/ukoly", "/rozvrh"];
 
 export const ADMIN_NAV: (NavItem & { adminOnly?: boolean })[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, anim: "pop" },

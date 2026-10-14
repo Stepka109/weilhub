@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BookOpen,
   CalendarDays,
   ClipboardCheck,
   FileCheck,
@@ -14,7 +13,6 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/misc";
 import { AnimatedIcon } from "@/components/icons/animated-icon";
-import { WelcomeIllustration } from "@/components/portal/welcome-illustration";
 import { DueBadge, MaterialRow, SubjectBadge, SubjectIcon } from "@/components/portal/shared";
 import { CompletionToggle } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
@@ -25,10 +23,10 @@ import { cn } from "@/lib/utils";
 export const metadata = { title: "Domů" };
 
 const QUICK = [
-  { href: "/materialy", title: "Studijní materiály", text: "Zápisy, prezentace a dokumenty", icon: FolderOpen, tone: "bg-light-blue text-primary", card: "bg-[#eef4ff]", anim: "bounce" as const },
+  { href: "/testy", title: "Testy", text: "Kdy se píše a z čeho", icon: FileCheck, tone: "bg-rose text-rose-ink", card: "bg-[#fff1f3]", anim: "wiggle" as const },
   { href: "/ukoly", title: "Úkoly", text: "Co je potřeba odevzdat", icon: ClipboardCheck, tone: "bg-mint text-mint-ink", card: "bg-[#ecfbf4]", anim: "pop" as const },
   { href: "/rozvrh", title: "Rozvrh", text: "Hodiny a změny tento týden", icon: CalendarDays, tone: "bg-yellow text-yellow-ink", card: "bg-[#fff8e0]", anim: "bounce" as const },
-  { href: "/predmety", title: "Předměty", text: "Všechno podle předmětů", icon: BookOpen, tone: "bg-lavender text-lavender-ink", card: "bg-[#f6f1ff]", anim: "pop" as const },
+  { href: "/materialy", title: "Materiály", text: "Zápisy, prezentace a dokumenty", icon: FolderOpen, tone: "bg-light-blue text-primary", card: "bg-[#eef4ff]", anim: "bounce" as const },
 ];
 
 export default async function DashboardPage() {
@@ -37,32 +35,67 @@ export default async function DashboardPage() {
   const [assignments, exams, materials, announcements, settings] = await Promise.all([
     // Nesplněné úkoly včetně těch po termínu (za poslední 2 týdny)
     getAssignments(user.id, { from: shiftDate(today, -14), onlyOpen: true, limit: 6 }),
-    getExams({ upcoming: true, limit: 4 }),
+    getExams({ upcoming: true, limit: 5 }),
     getMaterials({ limit: 6 }),
     getAnnouncements({ limit: 4 }),
     getSettings(),
   ]);
   const pinned = announcements.filter((a) => a.pinned);
   const firstName = user.profile.display_name.split(" ")[0];
+  const nextExam = exams[0];
+  const nextInfo = nextExam ? dueInfo(nextExam.exam_date, today) : null;
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      {/* Uvítací panel */}
-      <section className="relative overflow-hidden rounded-card border border-line/80 bg-card shadow-card">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_30%,rgba(47,104,255,0.08),transparent_55%)]" aria-hidden />
-        <div className="relative flex items-center justify-between gap-6 p-6 sm:p-8">
+      {/* Uvítací panel – vlevo pozdrav, vpravo nejbližší test */}
+      <section className="rounded-card border border-line/80 bg-card shadow-card">
+        <div className="flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-primary">{greetingDate(today)}</p>
-            <h1 className="mt-2 text-[1.9rem] leading-tight font-bold text-ink sm:text-[2.4rem]">Ahoj, {firstName}!</h1>
-            <p className="mt-2 max-w-md text-[1.02rem] text-muted">Všechno důležité ke studiu na jednom místě.</p>
+            <p className="text-sm font-medium text-muted">{greetingDate(today)}</p>
+            <h1 className="mt-1.5 text-[1.9rem] leading-tight font-bold text-ink sm:text-[2.2rem]">Ahoj, {firstName}!</h1>
             {settings && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Badge tone="blue">Třída {settings.class_label}</Badge>
-                <Badge tone="outline">Školní rok {settings.school_year}</Badge>
-              </div>
+              <p className="mt-2 text-[0.95rem] text-muted">
+                Třída {settings.class_label} · školní rok {settings.school_year}
+              </p>
             )}
           </div>
-          <WelcomeIllustration className="hidden h-40 w-auto shrink-0 sm:block lg:h-44" />
+
+          <Link
+            href={nextExam ? `/testy#test-${nextExam.id}` : "/testy"}
+            className="group flex w-full items-center gap-4 rounded-2xl border border-line bg-bg p-4 transition-colors hover:border-rose-ink/30 lg:w-[400px]"
+          >
+            {nextExam && nextInfo ? (
+              <>
+                <span className="flex w-16 shrink-0 flex-col items-center rounded-xl border-2 border-rose-ink/80 bg-card py-2">
+                  <span className="text-[11px] font-semibold text-rose-ink uppercase">{formatDate(nextExam.exam_date, "EEEEEE")}</span>
+                  <span className="font-display text-2xl leading-none font-bold text-ink">{formatDate(nextExam.exam_date, "d.")}</span>
+                  <span className="text-[11px] text-muted">{formatDate(nextExam.exam_date, "LLL")}</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-ink uppercase">
+                    <FileCheck className="size-3.5" aria-hidden /> Nejbližší test · {nextInfo.label.toLowerCase()}
+                  </span>
+                  <span className="mt-1 block truncate font-display text-lg font-bold text-ink group-hover:text-primary">{nextExam.title}</span>
+                  <span className="block truncate text-sm text-muted">
+                    {nextExam.subject.name}
+                    {nextExam.exam_time ? ` · ${formatTime(nextExam.exam_time)}` : ""}
+                    {exams.length > 1 ? ` · další testy: ${exams.length - 1}` : ""}
+                  </span>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-card text-muted">
+                  <FileCheck className="size-6" aria-hidden />
+                </span>
+                <span>
+                  <span className="block font-semibold text-ink">Žádný test v plánu</span>
+                  <span className="block text-sm text-muted">Nové testy se objeví tady.</span>
+                </span>
+              </>
+            )}
+            <ArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </Link>
         </div>
       </section>
 
@@ -121,39 +154,6 @@ export default async function DashboardPage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
-        {/* Nadcházející úkoly */}
-        <Card>
-          <CardHeader
-            title="Nadcházející úkoly"
-            description="Nesplněné úkoly seřazené podle termínu"
-            action={
-              <Link href="/ukoly" className="text-sm font-medium text-primary hover:underline">
-                Všechny
-              </Link>
-            }
-          />
-          <div className="px-3 pt-3 pb-4 sm:px-4">
-            {assignments.length === 0 ? (
-              <EmptyState icon={PartyPopper} title="Žádné nesplněné úkoly" description="Máš hotovo. Užij si volno!" />
-            ) : (
-              <ul>
-                {assignments.map((a) => (
-                  <li key={a.id} className="flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-bg sm:px-3">
-                    <CompletionToggle assignmentId={a.id} completed={a.completed} title={a.title} />
-                    <Link href={`/ukoly/${a.id}`} className="min-w-0 flex-1">
-                      <span className="line-clamp-2 block font-medium text-ink hover:text-primary sm:truncate">{a.title}</span>
-                      <span className="block truncate text-sm text-muted">
-                        {a.subject.name} · {formatDue(a.due_date, a.due_time)}
-                      </span>
-                    </Link>
-                    <DueBadge date={a.due_date} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
-
         {/* Nadcházející testy */}
         <Card>
           <CardHeader
@@ -202,6 +202,39 @@ export default async function DashboardPage() {
             )}
           </div>
         </Card>
+        {/* Nadcházející úkoly */}
+        <Card>
+          <CardHeader
+            title="Nadcházející úkoly"
+            description="Nesplněné úkoly seřazené podle termínu"
+            action={
+              <Link href="/ukoly" className="text-sm font-medium text-primary hover:underline">
+                Všechny
+              </Link>
+            }
+          />
+          <div className="px-3 pt-3 pb-4 sm:px-4">
+            {assignments.length === 0 ? (
+              <EmptyState icon={PartyPopper} title="Žádné nesplněné úkoly" description="Máš hotovo. Užij si volno!" />
+            ) : (
+              <ul>
+                {assignments.map((a) => (
+                  <li key={a.id} className="flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-bg sm:px-3">
+                    <CompletionToggle assignmentId={a.id} completed={a.completed} title={a.title} />
+                    <Link href={`/ukoly/${a.id}`} className="min-w-0 flex-1">
+                      <span className="line-clamp-2 block font-medium text-ink hover:text-primary sm:truncate">{a.title}</span>
+                      <span className="block truncate text-sm text-muted">
+                        {a.subject.name} · {formatDue(a.due_date, a.due_time)}
+                      </span>
+                    </Link>
+                    <DueBadge date={a.due_date} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
