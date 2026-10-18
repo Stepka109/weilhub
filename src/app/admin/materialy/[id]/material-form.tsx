@@ -117,7 +117,9 @@ export function MaterialForm({
         kind: values.kind,
         description: values.description,
         material_date: values.material_date,
-        content: values.kind === "note" ? values.content : undefined,
+        // Čistá kopie dat – uzly editoru (např. vzorce) nejsou obyčejné objekty a server
+        // by je dostal jen jako „temporary client reference“
+        content: values.kind === "note" && values.content ? JSON.parse(JSON.stringify(values.content)) : undefined,
         status: next,
       });
     } catch {

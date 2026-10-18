@@ -274,7 +274,8 @@ export function RichTextEditor({
     editorProps: {
       attributes: { class: "prose-wh px-5 py-5 sm:px-8 sm:py-7", "aria-label": "Obsah zápisu", role: "textbox", "aria-multiline": "true" },
     },
-    onUpdate: ({ editor: e }) => onChange(e.getJSON() as TiptapNode),
+    // Čistá data (bez prototypů ProseMirroru) – bezpečně serializovatelná do server actions
+    onUpdate: ({ editor: e }) => onChange(JSON.parse(JSON.stringify(e.getJSON())) as TiptapNode),
   });
 
   // Vzorce napsané jako text „$…$“ (např. vložené odjinud) – nabídneme převod
