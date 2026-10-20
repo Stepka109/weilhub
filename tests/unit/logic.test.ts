@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dueInfo, formatDue, schoolWeek } from "@/lib/dates";
-import { buildTimetableWeek, cycleWeekFor, effectiveCell, isSpan } from "@/lib/timetable";
+import { buildTimetableWeek, cycleWeekFor, effectiveCell, isSpan, markMatchesCell, placeMarks } from "@/lib/timetable";
 import { matchesSignature, validateFileMeta, sanitizeFileName } from "@/lib/files";
 import { renderTiptapHtml, safeHref, safeImageSrc, tiptapToText, inlineFileIds } from "@/lib/tiptap";
 import { isSafeExternalUrl, makeSnippet, slugify } from "@/lib/utils";
@@ -41,6 +41,21 @@ describe("rozvrh se střídáním týdnů", () => {
     expect(cycleWeekFor("2026-09-28", cfg)).toBe("A");
     expect(cycleWeekFor("2026-10-12", cfg)).toBe("B");
     expect(cycleWeekFor("2026-08-24", cfg)).toBe("F");
+  });
+
+  it("test a úkol se ukážou u první hodiny předmětu v daný den", () => {
+    const week = buildTimetableWeek({
+      monday: "2026-10-12", config: cfg, periods, overrides: [], dayOverrides: [],
+      slots: [slot("B", 1, 1, "EKA"), { ...slot("B", 1, 3, "CHE"), subject_name: "Chemie" }, { ...slot("B", 1, 4, "CHE"), subject_name: "Chemie" }],
+    });
+    const mark = (kind: "test" | "assignment", subjectAbbr: string, subjectName: string, date = "2026-10-12") =>
+      ({ kind, id: subjectAbbr, title: "x", date, subjectAbbr, subjectName, href: "/" });
+    const placed = placeMarks(week, [mark("test", "CHE", "Chemie"), mark("assignment", "Ch", "Chemie"), mark("test", "M", "Matematika")]);
+    expect(placed.get("2026-10-12:3")?.map((m) => m.kind)).toEqual(["test", "assignment"]);
+    expect(placed.has("2026-10-12:4")).toBe(false);
+    expect(placed.size).toBe(1);
+    expect(markMatchesCell({ subjectAbbr: "ČJ", subjectName: "Český jazyk" }, { code: "CJL", name: "Český jazyk a literatura" })).toBe(true);
+    expect(markMatchesCell({ subjectAbbr: "AJ", subjectName: "Anglický jazyk" }, { code: "CJL", name: "Český jazyk a literatura" })).toBe(false);
   });
 
   it("použije výchozí rozvrh správného týdne cyklu", () => {

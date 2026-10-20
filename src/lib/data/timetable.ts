@@ -8,6 +8,7 @@ import {
   type Override,
   type Period,
   type Slot,
+  type TimetableMark,
   type TimetableWeek,
 } from "@/lib/timetable";
 import type { EventKind } from "@/lib/types";
@@ -100,4 +101,24 @@ export async function getTimetableDayOverrides(from: string, to: string) {
   const supabase = await createClient();
   const { data } = await supabase.from("timetable_day_overrides").select("*").gte("date", from).lte("date", to);
   return (data ?? []) as DayOverride[];
+}
+
+/** Zveřejněné testy a termíny úkolů v daném týdnu – pro odznaky T / U v rozvrhu. */
+export async function getTimetableMarks(monday: string): Promise<TimetableMark[]> {
+  const supabase = await createClient();
+  const friday = shiftDate(monday, 4);
+  const subject = "subject:subjects!inner(name, abbreviation)";
+  const [exams, assignments] = await Promise.all([
+    supabase.from("exams").select(`id, title, exam_date, ${subject}`).eq("status", "published").gte("exam_date", monday).lte("exam_date", friday),
+    supabase.from("assignments").select(`id, title, due_date, ${subject}`).eq("status", "published").gte("due_date", monday).lte("due_date", friday),
+  ]);
+  type Ref = { name: string; abbreviation: string };
+  const marks: TimetableMark[] = [];
+  for (const e of (exams.data ?? []) as unknown as { id: string; title: string; exam_date: string; subject: Ref }[]) {
+    marks.push({ kind: "test", id: e.id, title: e.title, date: e.exam_date, subjectName: e.subject.name, subjectAbbr: e.subject.abbreviation, href: `/testy#test-${e.id}` });
+  }
+  for (const a of (assignments.data ?? []) as unknown as { id: string; title: string; due_date: string; subject: Ref }[]) {
+    marks.push({ kind: "assignment", id: a.id, title: a.title, date: a.due_date, subjectName: a.subject.name, subjectAbbr: a.subject.abbreviation, href: `/ukoly/${a.id}` });
+  }
+  return marks;
 }

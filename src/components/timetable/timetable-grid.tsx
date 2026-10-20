@@ -1,10 +1,21 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Dialog as D } from "radix-ui";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, X } from "lucide-react";
 import { WEEKDAYS, WEEKDAYS_SHORT, formatDate, formatTime, TIME_ZONE } from "@/lib/dates";
-import { STATUS_LABEL, isSpan, minutes, type Cell, type DayRow, type EventSpan, type TimetableWeek } from "@/lib/timetable";
+import {
+  STATUS_LABEL,
+  isSpan,
+  minutes,
+  placeMarks,
+  type Cell,
+  type DayRow,
+  type EventSpan,
+  type TimetableMark,
+  type TimetableWeek,
+} from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 
 const TAG: Partial<Record<Cell["status"], string>> = {
@@ -13,6 +24,9 @@ const TAG: Partial<Record<Cell["status"], string>> = {
   event: "A",
   cancelled: "O",
 };
+
+const MARK_LETTER: Record<TimetableMark["kind"], string> = { test: "T", assignment: "U" };
+const MARK_LABEL: Record<TimetableMark["kind"], string> = { test: "Test", assignment: "Odevzdání úkolu" };
 
 /* -------------------------------------------------------- aktuální čas (Praha) */
 
@@ -52,6 +66,7 @@ export interface DetailTarget {
   dayLabel: string;
   rows: [string, string][];
   note?: { text: string; tone: "red" | "green" | "purple" };
+  marks?: TimetableMark[];
 }
 
 export function cellDetail(cell: Cell, row: DayRow, week: TimetableWeek, endLesson?: number): DetailTarget {
@@ -127,6 +142,27 @@ export function TimetableDetail({ target, onClose }: { target: DetailTarget | nu
                   </div>
                 ))}
               </dl>
+              {!!target.marks?.length && (
+                <ul className="mx-4 mb-4 space-y-2 sm:mx-6 sm:mt-4" aria-label="Testy a úkoly">
+                  {target.marks.map((m) => (
+                    <li key={`${m.kind}-${m.id}`}>
+                      <Link
+                        href={m.href}
+                        className="flex items-center gap-3 rounded-2xl border border-[#ffd29a] bg-[#fff6eb] px-4 py-3 transition-colors hover:bg-[#ffecd4]"
+                      >
+                        <span className="tt-mark-letter" aria-hidden>
+                          {MARK_LETTER[m.kind]}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs font-semibold text-[#b45d00] uppercase">{MARK_LABEL[m.kind]}</span>
+                          <span className="block font-semibold break-words text-ink">{m.title}</span>
+                        </span>
+                        <ChevronRight className="size-5 shrink-0 text-[#b45d00]" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {target.note && (
                 <p
                   className={cn(
@@ -152,8 +188,11 @@ export function TimetableGrid({
   editable = false,
   onCellClick,
   onDayClick,
+  marks = [],
 }: {
   week: TimetableWeek;
+  /** Testy a úkoly – odznaky T / U u první hodiny předmětu v daný den */
+  marks?: TimetableMark[];
   editable?: boolean;
   onCellClick?: (cell: Cell, row: DayRow) => void;
   onDayClick?: (row: DayRow) => void;
@@ -161,12 +200,13 @@ export function TimetableGrid({
   const now = useNow();
   const [detail, setDetail] = React.useState<DetailTarget | null>(null);
   const today = now.date;
+  const placed = React.useMemo(() => placeMarks(week, marks), [week, marks]);
   const nowLesson = week.lessons.find((l) => now.minutes >= minutes(l.start_time) && now.minutes < minutes(l.end_time))?.lesson_number;
 
   function openCell(cell: Cell, row: DayRow, span?: EventSpan) {
     if (editable) return onCellClick?.(cell, row);
     if (cell.status === "empty") return;
-    setDetail(cellDetail(cell, row, week, span?.endLesson));
+    setDetail({ ...cellDetail(cell, row, week, span?.endLesson), marks: placed.get(`${row.date}:${cell.lesson}`) });
   }
 
   function renderCell(cell: Cell, row: DayRow) {
@@ -182,18 +222,29 @@ export function TimetableGrid({
     const tag = TAG[cell.status];
     const cancelled = cell.status === "cancelled";
     const greenCancel = cancelled && cell.override?.accent === "green";
+    const cellMarks = placed.get(`${row.date}:${cell.lesson}`) ?? [];
+    const kinds = (["test", "assignment"] as const).filter((k) => cellMarks.some((m) => m.kind === k));
     return (
       <button
         type="button"
         className={cn("tt-card", `st-${cell.status}`, greenCancel && "st-cancelled-green", isNow && "is-now")}
         onClick={() => openCell(cell, row)}
-        aria-label={`${label}: ${cell.name || cell.code}${cell.status !== "default" ? ` – ${STATUS_LABEL[cell.status as keyof typeof STATUS_LABEL]}` : ""}`}
+        aria-label={`${label}: ${cell.name || cell.code}${cell.status !== "default" ? ` – ${STATUS_LABEL[cell.status as keyof typeof STATUS_LABEL]}` : ""}${kinds.map((k) => ` – ${MARK_LABEL[k].toLowerCase()}`).join("")}`}
       >
         {tag && <span className="tt-tag">{tag}</span>}
         {cell.status === "new" && <span className="tt-badge-n">N</span>}
         {/* Odpadlá hodina je uprostřed prázdná – jen ohraničení a odznak O */}
         {!cancelled && <span className="tt-code">{cell.code}</span>}
         {!cancelled && cell.room && <span className="tt-room">{cell.room}</span>}
+        {kinds.length > 0 && (
+          <span className="tt-marks" aria-hidden>
+            {kinds.map((k) => (
+              <span key={k} className="tt-mark-letter">
+                {MARK_LETTER[k]}
+              </span>
+            ))}
+          </span>
+        )}
       </button>
     );
   }
@@ -312,6 +363,13 @@ export function TimetableLegend() {
           {label}
         </li>
       ))}
+      <li className="inline-flex items-center gap-2">
+        <span className="inline-flex gap-1" aria-hidden>
+          <span className="tt-mark-letter">T</span>
+          <span className="tt-mark-letter">U</span>
+        </span>
+        test / odevzdání úkolu
+      </li>
     </ul>
   );
 }

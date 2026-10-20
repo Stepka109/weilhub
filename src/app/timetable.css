@@ -101,6 +101,14 @@
 }
 .wh-tt .is-now { box-shadow: inset 0 0 0 2px var(--tt-orange); }
 
+/* odznaky T (test) a U (úkol) vlevo dole */
+.wh-tt .tt-marks { position: absolute; left: 5px; bottom: 5px; display: flex; gap: 3px; }
+.tt-mark-letter {
+  width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto;
+  border-radius: 6px; background: #ff8a00; color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 1; box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+
 /* celodenní záznam a vícehodinová akce */
 .wh-tt td.tt-wide { position: relative; height: var(--tt-row); padding: 6px; background: var(--wh-card); }
 .wh-tt .tt-wide-card {
@@ -140,6 +148,8 @@
   .wh-tt .tt-code { font-size: .92rem; }
   .wh-tt .tt-room { font-size: .62rem; }
   .wh-tt .tt-tag { min-width: 17px; height: 20px; font-size: .62rem; }
+  .wh-tt .tt-marks { left: 3px; bottom: 3px; gap: 2px; }
+  .wh-tt .tt-marks .tt-mark-letter { width: 16px; height: 16px; font-size: 9px; border-radius: 5px; }
   .wh-tt .st-changed, .wh-tt .st-roomchanged, .wh-tt .st-cancelled { border-width: 2px; }
   .wh-tt .tt-wide-card { padding: 4px 22px; border-width: 2px; }
   .wh-tt .tt-wide-label.is-sticky { left: calc(var(--tt-day) + 22px); right: 22px; }

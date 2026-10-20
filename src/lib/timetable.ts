@@ -271,3 +271,49 @@ export function minutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
 }
+
+/* ------------------------------------------------- úkoly a testy v rozvrhu */
+
+/** Test nebo termín úkolu, který se v rozvrhu ukáže jako odznak T / U. */
+export interface TimetableMark {
+  kind: "test" | "assignment";
+  id: string;
+  title: string;
+  date: string;
+  subjectName: string;
+  subjectAbbr: string;
+  href: string;
+}
+
+function normSubject(s: string | null | undefined) {
+  return (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Předmět portálu odpovídá hodině, když se shoduje zkratka s kódem v rozvrhu
+ * (CHE = CHE), nebo název (i zkrácený: „Český jazyk“ ~ „Český jazyk a literatura“).
+ */
+export function markMatchesCell(mark: Pick<TimetableMark, "subjectName" | "subjectAbbr">, cell: Pick<Cell, "code" | "name">) {
+  const abbr = normSubject(mark.subjectAbbr);
+  if (abbr && abbr === normSubject(cell.code)) return true;
+  const a = normSubject(mark.subjectName);
+  const b = normSubject(cell.name);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  return short.length >= 4 && long.startsWith(`${short} `);
+}
+
+/** Klíč `datum:hodina` → značky. Značka patří k první hodině daného předmětu v ten den. */
+export function placeMarks(week: TimetableWeek, marks: TimetableMark[]): Map<string, TimetableMark[]> {
+  const placed = new Map<string, TimetableMark[]>();
+  for (const mark of marks) {
+    const row = week.days.find((d) => d.date === mark.date);
+    if (!row || row.outsidePeriod || row.dayOverride) continue;
+    const cell = row.items.find((i): i is Cell => !isSpan(i) && i.status !== "empty" && i.status !== "event" && markMatchesCell(mark, i));
+    if (!cell) continue;
+    const key = `${row.date}:${cell.lesson}`;
+    placed.set(key, [...(placed.get(key) ?? []), mark]);
+  }
+  return placed;
+}
