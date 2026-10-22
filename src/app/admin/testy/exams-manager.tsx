@@ -12,6 +12,8 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { AdminTable, StatusBadge, Td, Tr } from "@/components/admin/common";
 import { RowMenu, StatusSelect } from "@/components/admin/row-menu";
 import { MaterialPicker, type MaterialOption } from "@/components/admin/material-picker";
+import { StudyGroupField } from "@/components/admin/study-group-field";
+import { GroupBadge } from "@/components/portal/group-badge";
 import { deleteRow, saveExam, setStatus } from "@/lib/actions/admin/content";
 import { useAction } from "@/lib/use-action";
 import { formatDate, formatTime, todayIso } from "@/lib/dates";
@@ -26,6 +28,7 @@ interface Values {
   exam_time: string;
   scope: string;
   notes: string;
+  study_group: "" | "S1" | "S2";
   status: PublicationStatus;
   material_ids: string[];
 }
@@ -40,7 +43,7 @@ function ExamDialog({
   exam: Row | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  subjects: { id: string; name: string }[];
+  subjects: { id: string; name: string; has_groups: boolean }[];
   materials: MaterialOption[];
 }) {
   const { pending, run } = useAction();
@@ -52,6 +55,7 @@ function ExamDialog({
       exam_time: exam?.exam_time?.slice(0, 5) ?? "",
       scope: exam?.scope ?? "",
       notes: exam?.notes ?? "",
+      study_group: exam?.study_group ?? "",
       status: exam?.status ?? "published",
       material_ids: exam?.materials.map((m) => m.material_id) ?? [],
     },
@@ -59,7 +63,8 @@ function ExamDialog({
   const e = formState.errors;
 
   const onSubmit = handleSubmit(async (v) => {
-    const res = await run(() => saveExam(exam?.id ?? null, v), { onSuccess: () => onOpenChange(false) });
+    const study_group = subjects.find((s) => s.id === v.subject_id)?.has_groups ? v.study_group : null;
+    const res = await run(() => saveExam(exam?.id ?? null, { ...v, study_group }), { onSuccess: () => onOpenChange(false) });
     if (!res.ok) for (const [k, m] of Object.entries(res.fieldErrors ?? {})) if (m?.[0]) setError(k as keyof Values, { message: m[0] });
   });
 
@@ -88,6 +93,9 @@ function ExamDialog({
               <Input id="e-time" type="time" {...register("exam_time")} />
             </Field>
           </div>
+          {subjects.find((s) => s.id === watch("subject_id"))?.has_groups && (
+            <StudyGroupField id="e-group" what="Test" {...register("study_group")} />
+          )}
           <Field label="Rozsah učiva" htmlFor="e-scope">
             <Textarea id="e-scope" rows={3} {...register("scope")} />
           </Field>
@@ -125,7 +133,7 @@ export function ExamsManager({
   openNew,
 }: {
   exams: Row[];
-  subjects: { id: string; name: string }[];
+  subjects: { id: string; name: string; has_groups: boolean }[];
   materials: MaterialOption[];
   openNew: boolean;
 }) {
@@ -176,6 +184,7 @@ export function ExamsManager({
               </Td>
               <Td label="Předmět" className="text-muted">
                 {x.subject?.name}
+                <GroupBadge group={x.study_group} className="ml-1.5" />
               </Td>
               <Td>
                 <StatusBadge status={x.status} />

@@ -55,7 +55,7 @@
 }
 .wh-tt td.tt-cell.is-today { background: #f6f9ff; }
 .wh-tt .tt-card {
-  position: relative; height: 100%; width: 100%;
+  position: relative; height: 100%; width: 100%; container-type: inline-size;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   padding: 6px 8px; border-radius: 10px;
   background: var(--tt-cell); border: 1px solid var(--tt-cell-border);
@@ -64,7 +64,7 @@
 }
 .wh-tt button.tt-card:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(20, 33, 61, .35); }
 .wh-tt .tt-code {
-  font-family: var(--font-display); font-size: 1.12rem; line-height: 1.05; font-weight: 800; color: var(--wh-text);
+  font-family: var(--font-display); font-size: min(1.12rem, 28cqi); line-height: 1.05; font-weight: 800; color: var(--wh-text);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wh-tt .tt-room { font-size: .74rem; color: var(--wh-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -100,6 +100,48 @@
   border-radius: 50%; background: var(--tt-green); color: #fff; font-size: 10px; font-weight: 800;
 }
 .wh-tt .is-now { box-shadow: inset 0 0 0 2px var(--tt-orange); }
+
+/* skupiny S1 / S2 */
+.tt-group {
+  display: inline-grid; place-items: center; min-width: 18px; height: 13px; padding: 0 3px;
+  border-radius: 4px; font-size: 8.5px; font-weight: 800; line-height: 1; letter-spacing: .02em;
+  background: #e2f5f2; color: #0b7d73;
+}
+.tt-group[data-g="S2"] { background: #ebe8ff; color: #4b3fd1; }
+.wh-tt .tt-card > .tt-group { position: absolute; top: 5px; left: 5px; }
+
+/* rozdělená buňka: nahoře S1, dole S2 */
+.wh-tt .tt-split { height: 100%; display: grid; grid-template-rows: 1fr 1fr; gap: 4px; }
+/* zkratka a učebna vždy přesně uprostřed; odznaky leží mimo tok na pevných místech:
+   vlevo stav (S/M/O) a T/U, vpravo skupina – symetrický okraj drží obsah ve středu */
+.wh-tt .tt-half {
+  position: relative; min-height: 0; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 2px 21px; border-radius: 8px; container-type: inline-size;
+  background: var(--tt-cell); border: 1px solid var(--tt-cell-border);
+  font: inherit; color: inherit; cursor: pointer; overflow: hidden;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.wh-tt button.tt-half:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(20, 33, 61, .35); }
+.wh-tt .tt-half > .tt-group { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); }
+/* zkratka se vždy vejde celá – písmo se zmenší podle šířky kartičky */
+.wh-tt .tt-half .tt-code { font-size: clamp(.6rem, 32cqi, .9rem); max-width: none; overflow: visible; text-overflow: clip; }
+.wh-tt .tt-half .tt-room { font-size: .64rem; line-height: 1.1; max-width: 100%; }
+.wh-tt .tt-half .tt-tag { height: 18px; min-width: 16px; font-size: .6rem; }
+.wh-tt .tt-half .tt-badge-n { top: 50%; left: 4px; right: auto; width: 16px; height: 16px; font-size: 9px; transform: translateY(-50%); }
+.wh-tt .tt-half .tt-marks { left: 5px; bottom: auto; top: 50%; transform: translateY(-50%); }
+.wh-tt .tt-half:has(> .tt-tag) .tt-marks { left: 18px; }
+.wh-tt .tt-half .tt-marks .tt-mark-letter { width: 14px; height: 14px; font-size: 8.5px; border-radius: 4px; }
+/* stavy u poloviny vypadají stejně jako u celé kartičky (bílé pozadí, barevné ohraničení) */
+.wh-tt .tt-half.st-changed { background: #fff; border: 2px solid var(--tt-red); }
+.wh-tt .tt-half.st-roomchanged, .wh-tt .tt-half.st-cancelled { background: #fff; border: 2px dashed var(--tt-red); }
+.wh-tt .tt-half.st-cancelled.st-cancelled-green { border-color: var(--tt-green); }
+.wh-tt .tt-half.st-event { background: #fff; border: 2px dashed var(--tt-green); }
+.wh-tt .tt-half.st-new { background: #fff; border: 2px solid var(--tt-green); }
+.wh-tt .tt-half-empty { background: transparent; border: 1px dashed #dbe3ee; cursor: default; }
+.wh-tt .tt-half-empty .tt-group { opacity: .55; }
+.wh-tt .tt-half-empty.is-add { cursor: pointer; color: var(--wh-muted); }
+.wh-tt .tt-half-empty.is-add:hover { border-color: var(--tt-cell-border); background: var(--wh-light-blue); }
 
 /* odznaky T (test) a U (úkol) vlevo dole */
 .wh-tt .tt-marks { position: absolute; left: 5px; bottom: 5px; display: flex; gap: 3px; }
@@ -145,10 +187,20 @@
   .wh-tt .tt-day small { font-size: .58rem; }
   .wh-tt td.tt-cell, .wh-tt td.tt-wide { padding: 4px; }
   .wh-tt .tt-card { padding: 4px 6px; border-radius: 8px; gap: 2px; }
-  .wh-tt .tt-code { font-size: .92rem; }
+  .wh-tt .tt-code { font-size: min(.92rem, 28cqi); }
   .wh-tt .tt-room { font-size: .62rem; }
   .wh-tt .tt-tag { min-width: 17px; height: 20px; font-size: .62rem; }
   .wh-tt .tt-marks { left: 3px; bottom: 3px; gap: 2px; }
+  .wh-tt .tt-split { gap: 3px; }
+  .wh-tt .tt-half { padding: 1px 17px; border-radius: 6px; }
+  .wh-tt .tt-half > .tt-group { right: 3px; }
+  .wh-tt .tt-half .tt-code { font-size: clamp(.55rem, 32cqi, .8rem); }
+  .wh-tt .tt-half .tt-room { display: none; }
+  .wh-tt .tt-half .tt-tag { height: 14px; min-width: 12px; font-size: .5rem; }
+  .wh-tt .tt-half .tt-marks { left: 3px; }
+  .wh-tt .tt-half:has(> .tt-tag) .tt-marks { left: 13px; }
+  .wh-tt .tt-half .tt-marks .tt-mark-letter { width: 12px; height: 12px; font-size: 7.5px; border-radius: 3px; }
+  .tt-group { min-width: 15px; height: 12px; font-size: 7.5px; padding: 0 2px; border-radius: 3px; }
   .wh-tt .tt-marks .tt-mark-letter { width: 16px; height: 16px; font-size: 9px; border-radius: 5px; }
   .wh-tt .st-changed, .wh-tt .st-roomchanged, .wh-tt .st-cancelled { border-width: 2px; }
   .wh-tt .tt-wide-card { padding: 4px 22px; border-width: 2px; }

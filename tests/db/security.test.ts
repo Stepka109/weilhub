@@ -256,7 +256,7 @@ describe("rozvrh se střídáním týdnů", () => {
   it("import obsahuje rozvrh I1.M pro týdny A, E, B, F", async () => {
     await asUser(db, studentId);
     const res = await db.query<{ cycle_week: string; n: number }>(
-      "select cycle_week, count(*)::int as n from public.timetable_slots group by cycle_week order by cycle_week",
+      "select cycle_week, count(*)::int as n from public.timetable_slots where study_group <> 'S1' group by cycle_week order by cycle_week",
     );
     expect(res.rows).toEqual([
       { cycle_week: "A", n: 32 },
@@ -265,6 +265,46 @@ describe("rozvrh se střídáním týdnů", () => {
       { cycle_week: "F", n: 32 },
     ]);
     expect(await count("select 1 from public.timetable_subjects")).toBe(14);
+  });
+
+  it("dělené předměty patří S2 a skupina S1 má vlastní rozvrh", async () => {
+    await asUser(db, studentId);
+    const groups = await db.query<{ study_group: string; n: number }>(
+      "select study_group, count(*)::int as n from public.timetable_slots group by study_group order by study_group = 'all' desc, study_group",
+    );
+    expect(groups.rows).toEqual([
+      { study_group: "all", n: 72 },
+      { study_group: "S1", n: 56 },
+      { study_group: "S2", n: 56 },
+    ]);
+    // Pondělí 4. hodina (týden A): S1 má DIG v S310, S2 DIG v S205
+    const mon = await db.query<{ study_group: string; room: string; teacher: string }>(
+      "select study_group, room, teacher from public.timetable_slots where cycle_week = 'A' and day_of_week = 1 and lesson_number = 4 order by study_group",
+    );
+    expect(mon.rows).toEqual([
+      { study_group: "S1", room: "S310", teacher: "Mgr. Lucia Studená" },
+      { study_group: "S2", room: "S205", teacher: "Mgr. Lucia Studená" },
+    ]);
+    // Akce třídy platí pro všechny, zrušení hodiny S2 jen pro S2
+    expect(await count("select 1 from public.timetable_overrides where kind = 'event' and study_group <> 'all'")).toBe(0);
+    expect(await count("select 1 from public.timetable_overrides where week_start = '2026-08-31' and day_of_week = 5 and study_group = 'S2'")).toBe(4);
+    expect(await count("select 1 from public.timetable_overrides where week_start = '2026-08-31' and day_of_week = 5 and study_group = 'all'")).toBe(2);
+  });
+
+  it("stejná hodina může mít zvlášť skupinu S1 i S2, ale ne dvakrát stejnou", async () => {
+    await asUser(db, editorId);
+    await db.query(
+      "insert into public.timetable_overrides (week_start, day_of_week, lesson_number, kind, study_group) values ('2026-11-02', 1, 4, 'cancelled', 'S1')",
+    );
+    await db.query(
+      "insert into public.timetable_overrides (week_start, day_of_week, lesson_number, kind, study_group) values ('2026-11-02', 1, 4, 'cancelled', 'S2')",
+    );
+    await expect(
+      db.query("insert into public.timetable_overrides (week_start, day_of_week, lesson_number, kind, study_group) values ('2026-11-02', 1, 4, 'cancelled', 'S1')"),
+    ).rejects.toThrow(/duplicate key/);
+    await expect(
+      db.query("insert into public.timetable_slots (cycle_week, day_of_week, lesson_number, subject_code, subject_name, study_group) values ('A', 1, 1, 'X', 'X', 'S3')"),
+    ).rejects.toThrow(/check constraint/);
   });
 
   it("student nemůže měnit rozvrh, redaktor ano", async () => {

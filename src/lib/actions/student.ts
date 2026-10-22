@@ -96,6 +96,7 @@ export async function setAvatar(path: string | null): Promise<ActionResult> {
 const prefsSchema = z.object({
   hideCompleted: z.boolean().optional(),
   compactLists: z.boolean().optional(),
+  studyGroup: z.enum(["S1", "S2"]).nullable().optional(),
 });
 
 export async function updatePreferences(input: z.input<typeof prefsSchema>): Promise<ActionResult> {

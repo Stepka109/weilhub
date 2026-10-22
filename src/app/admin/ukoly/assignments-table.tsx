@@ -14,6 +14,7 @@ import { deleteAssignment } from "@/lib/actions/admin/materials";
 import { useAction } from "@/lib/use-action";
 import { formatDate, formatDue, todayIso } from "@/lib/dates";
 import type { Assignment, SubjectRef } from "@/lib/types";
+import { GroupBadge } from "@/components/portal/group-badge";
 
 type Row = Assignment & { subject: SubjectRef | null; files: { id: string }[] };
 
@@ -70,6 +71,7 @@ export function AssignmentsTable({ assignments }: { assignments: Row[] }) {
               </Td>
               <Td label="Předmět" className="text-muted">
                 {a.subject?.name}
+                <GroupBadge group={a.study_group} className="ml-1.5" />
               </Td>
               <Td label="Zadáno" className="whitespace-nowrap text-muted">
                 {formatDate(a.assigned_on)}

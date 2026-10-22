@@ -14,6 +14,7 @@ import { signOut, updatePassword } from "@/lib/actions/auth";
 import { updatePreferences } from "@/lib/actions/student";
 import { newPasswordSchema } from "@/lib/validation/auth";
 import type { UserPreferences } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function SettingsForms({ preferences, email }: { preferences: UserPreferences; email: string }) {
   const [prefs, setPrefs] = useState(preferences);
@@ -21,7 +22,7 @@ export function SettingsForms({ preferences, email }: { preferences: UserPrefere
   const [pwPending, startPw] = useTransition();
   const pw = useForm<z.input<typeof newPasswordSchema>>({ resolver: zodResolver(newPasswordSchema) });
 
-  function savePref(key: keyof UserPreferences, value: boolean) {
+  function savePref<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
     const prev = prefs;
     setPrefs({ ...prefs, [key]: value });
     startTransition(async () => {
@@ -45,6 +46,35 @@ export function SettingsForms({ preferences, email }: { preferences: UserPrefere
             </span>
             <Switch checked={!!prefs.hideCompleted} disabled={pending} onCheckedChange={(v) => savePref("hideCompleted", v)} />
           </label>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <span>
+              <span className="block font-medium text-ink" id="pref-group">
+                Moje skupina
+              </span>
+              <span className="block text-sm text-muted">U dělených předmětů uvidíš rozvrh, materiály, úkoly a testy své skupiny.</span>
+            </span>
+            <div role="radiogroup" aria-labelledby="pref-group" className="inline-flex gap-1 rounded-full border border-line bg-card p-1">
+              {([null, "S1", "S2"] as const).map((g) => {
+                const active = (prefs.studyGroup ?? null) === g;
+                return (
+                  <button
+                    key={g ?? "none"}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    disabled={pending}
+                    onClick={() => savePref("studyGroup", g)}
+                    className={cn(
+                      "h-9 rounded-full px-4 text-sm font-medium whitespace-nowrap transition-colors",
+                      active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-slate-soft hover:text-ink",
+                    )}
+                  >
+                    {g ?? "Nezvoleno"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </CardBody>
       </Card>
 

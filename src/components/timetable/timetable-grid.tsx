@@ -8,6 +8,8 @@ import { WEEKDAYS, WEEKDAYS_SHORT, formatDate, formatTime, TIME_ZONE } from "@/l
 import {
   STATUS_LABEL,
   isSpan,
+  isSplit,
+  markKey,
   minutes,
   placeMarks,
   type Cell,
@@ -79,6 +81,7 @@ export function cellDetail(cell: Cell, row: DayRow, week: TimetableWeek, endLess
     ["Čas", start && end ? `${formatTime(start.start_time)}–${formatTime(end.end_time)}` : "—"],
     ["Místnost", cell.room || "—"],
   ];
+  if (cell.group !== "all") rows.splice(1, 0, ["Skupina", `${cell.group} (jen tato skupina)`]);
   if (cell.status === "roomchanged" && cell.base?.room) rows.push(["Původní místnost", cell.base.room]);
   if (cell.status === "changed" && cell.base) rows.push(["Původně", `${cell.base.subject_name} (${cell.base.subject_code})`]);
   rows.push(["Týden rozvrhu", week.cycleWeek]);
@@ -201,18 +204,33 @@ export function TimetableGrid({
   const [detail, setDetail] = React.useState<DetailTarget | null>(null);
   const today = now.date;
   const placed = React.useMemo(() => placeMarks(week, marks), [week, marks]);
+  const marksFor = (row: DayRow, cell: Cell) => placed.get(markKey(row.date, cell)) ?? [];
   const nowLesson = week.lessons.find((l) => now.minutes >= minutes(l.start_time) && now.minutes < minutes(l.end_time))?.lesson_number;
 
   function openCell(cell: Cell, row: DayRow, span?: EventSpan) {
     if (editable) return onCellClick?.(cell, row);
     if (cell.status === "empty") return;
-    setDetail({ ...cellDetail(cell, row, week, span?.endLesson), marks: placed.get(`${row.date}:${cell.lesson}`) });
+    setDetail({ ...cellDetail(cell, row, week, span?.endLesson), marks: marksFor(row, cell) });
   }
 
-  function renderCell(cell: Cell, row: DayRow) {
+  /** `half` = polovina rozdělené buňky (jedna skupina) */
+  function renderCell(cell: Cell, row: DayRow, half = false) {
     const isNow = row.date === today && cell.lesson === nowLesson;
-    const label = `${WEEKDAYS[row.day - 1]}, ${cell.lesson}. hodina`;
+    const groupLabel = cell.group !== "all" ? ` – skupina ${cell.group}` : "";
+    const label = `${WEEKDAYS[row.day - 1]}, ${cell.lesson}. hodina${groupLabel}`;
     if (cell.status === "empty") {
+      if (half) {
+        return editable ? (
+          <button type="button" className="tt-half tt-half-empty is-add" onClick={() => openCell(cell, row)} aria-label={`Přidat hodinu – ${label}`}>
+            <span className="tt-group" data-g={cell.group}>{cell.group}</span>
+            <Plus className="size-4" aria-hidden />
+          </button>
+        ) : (
+          <span className="tt-half tt-half-empty" aria-label={`Skupina ${cell.group} nemá hodinu`}>
+            <span className="tt-group" data-g={cell.group}>{cell.group}</span>
+          </span>
+        );
+      }
       return editable ? (
         <button type="button" className="tt-empty-add" onClick={() => openCell(cell, row)} aria-label={`Přidat hodinu – ${label}`}>
           <Plus className="size-5" aria-hidden />
@@ -222,16 +240,17 @@ export function TimetableGrid({
     const tag = TAG[cell.status];
     const cancelled = cell.status === "cancelled";
     const greenCancel = cancelled && cell.override?.accent === "green";
-    const cellMarks = placed.get(`${row.date}:${cell.lesson}`) ?? [];
+    const cellMarks = marksFor(row, cell);
     const kinds = (["test", "assignment"] as const).filter((k) => cellMarks.some((m) => m.kind === k));
     return (
       <button
         type="button"
-        className={cn("tt-card", `st-${cell.status}`, greenCancel && "st-cancelled-green", isNow && "is-now")}
+        className={cn(half ? "tt-half" : "tt-card", `st-${cell.status}`, greenCancel && "st-cancelled-green", isNow && "is-now")}
         onClick={() => openCell(cell, row)}
         aria-label={`${label}: ${cell.name || cell.code}${cell.status !== "default" ? ` – ${STATUS_LABEL[cell.status as keyof typeof STATUS_LABEL]}` : ""}${kinds.map((k) => ` – ${MARK_LABEL[k].toLowerCase()}`).join("")}`}
       >
         {tag && <span className="tt-tag">{tag}</span>}
+        {cell.group !== "all" && <span className="tt-group" data-g={cell.group}>{cell.group}</span>}
         {cell.status === "new" && <span className="tt-badge-n">N</span>}
         {/* Odpadlá hodina je uprostřed prázdná – jen ohraničení a odznak O */}
         {!cancelled && <span className="tt-code">{cell.code}</span>}
@@ -317,7 +336,14 @@ export function TimetableGrid({
                     </td>
                   ) : (
                     row.items.map((item) =>
-                      isSpan(item) ? (
+                      isSplit(item) ? (
+                        <td key={item.lesson} className={cn("tt-cell", isToday && "is-today")}>
+                          <div className="tt-split">
+                            {renderCell(item.s1, row, true)}
+                            {renderCell(item.s2, row, true)}
+                          </div>
+                        </td>
+                      ) : isSpan(item) ? (
                         <td key={`s${item.startLesson}`} className="tt-wide" colSpan={item.length}>
                           <button type="button" className="tt-wide-card is-event" onClick={() => openCell(item.cell, row, item)}>
                             <span className="tt-tag">A</span>
@@ -369,6 +395,13 @@ export function TimetableLegend() {
           <span className="tt-mark-letter">U</span>
         </span>
         test / odevzdání úkolu
+      </li>
+      <li className="inline-flex items-center gap-2">
+        <span className="inline-flex gap-1" aria-hidden>
+          <span className="tt-group" data-g="S1">S1</span>
+          <span className="tt-group" data-g="S2">S2</span>
+        </span>
+        hodina jen pro jednu skupinu
       </li>
     </ul>
   );

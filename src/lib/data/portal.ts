@@ -13,6 +13,7 @@ import type {
   SchoolEvent,
   Subject,
   SubjectRef,
+  StudyGroup,
   SubjectTopic,
   UsefulLink,
 } from "@/lib/types";
@@ -26,9 +27,12 @@ import type {
 
 const SUBJECT_REF = "subject:subjects!inner(id, name, slug, abbreviation, color, icon)";
 
+/** Obsah pro obě skupiny + pro zvolenou skupinu (bez skupiny = všechno). */
+const GROUP_FILTER = (group: StudyGroup) => `study_group.is.null,study_group.eq.${group}`;
+
 export type WithSubject<T> = T & { subject: SubjectRef };
 export type MaterialListItem = WithSubject<
-  Pick<Material, "id" | "title" | "kind" | "description" | "material_date" | "published_at" | "updated_at" | "topic_id">
+  Pick<Material, "id" | "title" | "kind" | "description" | "material_date" | "published_at" | "updated_at" | "topic_id" | "study_group">
 > & { author: { display_name: string } | null; files: Pick<MaterialFile, "mime_type" | "file_name" | "role">[] };
 
 export const getSettings = cache(async (): Promise<AppSettings | null> => {
@@ -66,7 +70,7 @@ export async function getTopics(subjectId: string): Promise<SubjectTopic[]> {
 }
 
 const MATERIAL_LIST =
-  `id, title, kind, description, material_date, published_at, updated_at, topic_id, ${SUBJECT_REF}, ` +
+  `id, title, kind, description, material_date, published_at, updated_at, topic_id, study_group, ${SUBJECT_REF}, ` +
   "author:profiles!materials_created_by_fkey(display_name), files:material_files(mime_type, file_name, role)";
 
 export async function getMaterials(opts: {
@@ -76,9 +80,11 @@ export async function getMaterials(opts: {
   sort?: "newest" | "oldest" | "title";
   limit?: number;
   ids?: string[];
+  group?: StudyGroup | null;
 } = {}): Promise<MaterialListItem[]> {
   const supabase = await createClient();
   let q = supabase.from("materials").select(MATERIAL_LIST).eq("status", "published");
+  if (opts.group) q = q.or(GROUP_FILTER(opts.group));
   if (opts.subjectId) q = q.eq("subject_id", opts.subjectId);
   if (opts.topicId) q = q.eq("topic_id", opts.topicId);
   if (opts.kind) q = q.eq("kind", opts.kind);
@@ -125,7 +131,7 @@ export type AssignmentListItem = WithSubject<Assignment> & {
 
 export async function getAssignments(
   userId: string,
-  opts: { subjectId?: string; from?: string; limit?: number; onlyOpen?: boolean } = {},
+  opts: { subjectId?: string; from?: string; limit?: number; onlyOpen?: boolean; group?: StudyGroup | null } = {},
 ): Promise<AssignmentListItem[]> {
   const supabase = await createClient();
   let q = supabase
@@ -136,6 +142,7 @@ export async function getAssignments(
     .order("due_time", { ascending: true, nullsFirst: false });
   if (opts.subjectId) q = q.eq("subject_id", opts.subjectId);
   if (opts.from) q = q.gte("due_date", opts.from);
+  if (opts.group) q = q.or(GROUP_FILTER(opts.group));
   const [{ data, error }, completions] = await Promise.all([
     q,
     supabase.from("assignment_completions").select("assignment_id").eq("user_id", userId),
@@ -173,7 +180,9 @@ export async function getAssignment(id: string, userId: string) {
 
 export type ExamListItem = WithSubject<Exam> & { materials: { material: { id: string; title: string; status: string } | null }[] };
 
-export async function getExams(opts: { subjectId?: string; upcoming?: boolean; limit?: number } = {}): Promise<ExamListItem[]> {
+export async function getExams(
+  opts: { subjectId?: string; upcoming?: boolean; limit?: number; group?: StudyGroup | null } = {},
+): Promise<ExamListItem[]> {
   const supabase = await createClient();
   const today = todayIso();
   let q = supabase
@@ -181,6 +190,7 @@ export async function getExams(opts: { subjectId?: string; upcoming?: boolean; l
     .select(`*, ${SUBJECT_REF}, materials:exam_materials(material:materials(id, title, status))`)
     .eq("status", "published");
   if (opts.subjectId) q = q.eq("subject_id", opts.subjectId);
+  if (opts.group) q = q.or(GROUP_FILTER(opts.group));
   if (opts.upcoming === true) q = q.gte("exam_date", today).order("exam_date").order("exam_time", { nullsFirst: false });
   else if (opts.upcoming === false) q = q.lt("exam_date", today).order("exam_date", { ascending: false });
   else q = q.order("exam_date");
@@ -242,11 +252,17 @@ export interface CalendarItem {
 }
 
 /** Společný kalendář: testy, termíny úkolů, akce a volné dny. */
-export async function getCalendarItems(from: string, to: string): Promise<CalendarItem[]> {
+export async function getCalendarItems(from: string, to: string, group?: StudyGroup | null): Promise<CalendarItem[]> {
   const supabase = await createClient();
+  let examQ = supabase.from("exams").select(`id, title, exam_date, exam_time, scope, ${SUBJECT_REF}`).eq("status", "published").gte("exam_date", from).lte("exam_date", to);
+  let assignmentQ = supabase.from("assignments").select(`id, title, due_date, due_time, instructions, ${SUBJECT_REF}`).eq("status", "published").gte("due_date", from).lte("due_date", to);
+  if (group) {
+    examQ = examQ.or(GROUP_FILTER(group));
+    assignmentQ = assignmentQ.or(GROUP_FILTER(group));
+  }
   const [exams, assignments, events] = await Promise.all([
-    supabase.from("exams").select(`id, title, exam_date, exam_time, scope, ${SUBJECT_REF}`).eq("status", "published").gte("exam_date", from).lte("exam_date", to),
-    supabase.from("assignments").select(`id, title, due_date, due_time, instructions, ${SUBJECT_REF}`).eq("status", "published").gte("due_date", from).lte("due_date", to),
+    examQ,
+    assignmentQ,
     supabase.from("events").select("*").eq("status", "published").lte("start_date", to).gte("end_date", from),
   ]);
   const { data: ttDays } = await supabase.from("timetable_day_overrides").select("*").gte("date", from).lte("date", to);

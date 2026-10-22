@@ -2,22 +2,38 @@ import { CalendarDays, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/misc";
 import { TimetableGrid, TimetableLegend } from "@/components/timetable/timetable-grid";
-import { WeekNav } from "@/components/timetable/week-nav";
+import { GroupSwitch, WeekNav, groupQuery } from "@/components/timetable/week-nav";
+import { GroupPicker } from "@/components/portal/group-picker";
+import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data/portal";
 import { getTimetableMarks, getTimetableWeek } from "@/lib/data/timetable";
 import { formatDate, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
+import { isSpan, isSplit, parseGroupView, type Cell } from "@/lib/timetable";
+
+const isChange = (c: Cell) => c.status !== "default" && c.status !== "empty";
 
 export const metadata = { title: "Rozvrh" };
 
 export default async function TimetablePage({ searchParams }: PageProps<"/rozvrh">) {
-  const sp = await searchParams;
+  const [sp, user] = await Promise.all([searchParams, requireUser()]);
+  const myGroup = user.profile.preferences?.studyGroup ?? null;
+  // Výchozí zobrazení = vlastní skupina; bez ní rozvrh obou skupin
+  const view = parseGroupView(sp.skupina) ?? myGroup ?? "both";
   const today = todayIso();
   // O víkendu se automaticky zobrazí následující týden
   const thisWeek = schoolWeek(today);
   const defaultMonday = today > thisWeek[4] ? shiftDate(thisWeek[0], 7) : thisWeek[0];
   const monday = typeof sp.tyden === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.tyden) ? schoolWeek(sp.tyden)[0] : defaultMonday;
-  const [{ week, hasAnySlots }, settings, marks] = await Promise.all([getTimetableWeek(monday), getSettings(), getTimetableMarks(monday)]);
-  const changes = week.days.reduce((n, d) => n + d.items.filter((i) => ("status" in i ? i.status !== "default" && i.status !== "empty" : true)).length, 0);
+  const [{ week, hasAnySlots }, settings, marks] = await Promise.all([
+    getTimetableWeek(monday, { group: view }),
+    getSettings(),
+    getTimetableMarks(monday),
+  ]);
+  const changes = week.days.reduce(
+    (n, d) => n + d.items.filter((i) => (isSpan(i) ? true : isSplit(i) ? isChange(i.s1) || isChange(i.s2) : isChange(i))).length,
+    0,
+  );
+  const groupParam = `&skupina=${groupQuery(view)}`;
 
   return (
     <>
@@ -34,13 +50,16 @@ export default async function TimetablePage({ searchParams }: PageProps<"/rozvrh
         }
       />
 
+      <GroupSwitch view={view} myGroup={myGroup} hrefFor={(q) => `/rozvrh?tyden=${week.monday}&skupina=${q}`} />
       <WeekNav
         basePath="/rozvrh"
         monday={week.monday}
         label={`${formatDate(week.monday, "d. M.")} – ${formatDate(week.days[4].date, "d. M. yyyy")}`}
         cycleWeek={week.cycleWeek}
         isCurrent={week.monday === defaultMonday}
+        extraQuery={groupParam}
       />
+      {!myGroup && <GroupPicker className="mb-4" text="Rozvrh se ti pak otevře rovnou pro tvou skupinu. Ostatní skupinu i celý rozvrh uvidíš přepínačem výše." />}
 
       {hasAnySlots ? (
         <TimetableGrid week={week} marks={marks} />

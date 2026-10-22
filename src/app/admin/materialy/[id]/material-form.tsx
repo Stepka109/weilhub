@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
+import { StudyGroupField } from "@/components/admin/study-group-field";
 import { CheckCircle2, CircleAlert, Eye, FileText, Loader2, NotebookPen, Save, Send, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ interface Values {
   kind: "note" | "file";
   description: string;
   material_date: string;
+  study_group: "" | "S1" | "S2";
   content: TiptapNode | null;
 }
 
@@ -60,13 +62,15 @@ export function MaterialForm({
     kind: material?.kind ?? "note",
     description: material?.description ?? "",
     material_date: material?.material_date ?? "",
+    study_group: material?.study_group ?? "",
     content: material?.content ?? null,
   };
   const form = useForm<Values>({ defaultValues: defaults });
   const { register, control, handleSubmit, watch, formState, setError, getValues, reset, trigger } = form;
   const subjectId = watch("subject_id");
   const kind = watch("kind");
-  const topics = subjects.find((s) => s.id === subjectId)?.topics ?? [];
+  const subject = subjects.find((s) => s.id === subjectId);
+  const topics = subject?.topics ?? [];
   const mainFile = files.find((f) => f.role === "main");
   const attachments = files.filter((f) => f.role === "attachment");
 
@@ -117,6 +121,7 @@ export function MaterialForm({
         kind: values.kind,
         description: values.description,
         material_date: values.material_date,
+        study_group: subjects.find((s) => s.id === values.subject_id)?.has_groups ? values.study_group : null,
         // Čistá kopie dat – uzly editoru (např. vzorce) nejsou obyčejné objekty a server
         // by je dostal jen jako „temporary client reference“
         content: values.kind === "note" && values.content ? JSON.parse(JSON.stringify(values.content)) : undefined,
@@ -342,6 +347,7 @@ export function MaterialForm({
                   ))}
                 </Select>
               </Field>
+              {subject?.has_groups && <StudyGroupField id="m-group" what="Materiál" {...register("study_group")} />}
               <Field label="Tematický okruh" htmlFor="m-topic" hint={subjectId && topics.length === 0 ? "Předmět zatím nemá témata (lze přidat ve správě předmětů)." : undefined}>
                 <Select id="m-topic" disabled={!topics.length} {...register("topic_id")}>
                   <option value="">Bez tématu</option>

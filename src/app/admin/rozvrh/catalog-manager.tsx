@@ -16,6 +16,8 @@ interface SubjectValues {
   code: string;
   name: string;
   default_teacher: string;
+  teacher_s1: string;
+  teacher_s2: string;
 }
 
 function SubjectRow({ subject, teachers }: { subject: TimetableSubject; teachers: string[] }) {
@@ -23,7 +25,13 @@ function SubjectRow({ subject, teachers }: { subject: TimetableSubject; teachers
   const [confirmDialog, ask] = useConfirm();
   const [editing, setEditing] = React.useState(false);
   const { register, handleSubmit } = useForm<SubjectValues>({
-    values: { code: subject.code, name: subject.name, default_teacher: subject.default_teacher ?? "" },
+    values: {
+      code: subject.code,
+      name: subject.name,
+      default_teacher: subject.default_teacher ?? "",
+      teacher_s1: subject.teacher_s1 ?? "",
+      teacher_s2: subject.teacher_s2 ?? "",
+    },
   });
 
   if (editing) {
@@ -47,6 +55,14 @@ function SubjectRow({ subject, teachers }: { subject: TimetableSubject; teachers
               <X />
             </Button>
           </div>
+          <div className="grid gap-2 sm:col-span-4 sm:grid-cols-2">
+            <Field label="Učitel skupiny S1" htmlFor={`t1-${subject.id}`} hint="Prázdné = stejný jako výchozí.">
+              <Input id={`t1-${subject.id}`} className="h-10" list="cat-teachers" {...register("teacher_s1")} />
+            </Field>
+            <Field label="Učitel skupiny S2" htmlFor={`t2-${subject.id}`} hint="Změna se propíše i do hodin skupiny v rozvrhu.">
+              <Input id={`t2-${subject.id}`} className="h-10" list="cat-teachers" {...register("teacher_s2")} />
+            </Field>
+          </div>
         </form>
         <datalist id="cat-teachers">
           {teachers.map((t) => (
@@ -63,6 +79,18 @@ function SubjectRow({ subject, teachers }: { subject: TimetableSubject; teachers
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium text-ink">{subject.name}</span>
         <span className="block truncate text-sm text-muted">{subject.default_teacher ?? "bez výchozího učitele"}</span>
+        {(subject.teacher_s1 || subject.teacher_s2) && (
+          <span className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+            <span>
+              <span className="tt-group mr-1 align-middle" data-g="S1">S1</span>
+              {subject.teacher_s1 ?? subject.default_teacher ?? "—"}
+            </span>
+            <span>
+              <span className="tt-group mr-1 align-middle" data-g="S2">S2</span>
+              {subject.teacher_s2 ?? subject.default_teacher ?? "—"}
+            </span>
+          </span>
+        )}
       </span>
       <Button variant="ghost" size="icon-sm" aria-label={`Upravit ${subject.name}`} onClick={() => setEditing(true)}>
         <Pencil />
@@ -91,13 +119,13 @@ export function CatalogManager({ subjects, teachers }: { subjects: TimetableSubj
   const { pending, run } = useAction();
   const [confirmDialog, ask] = useConfirm();
   const [teacherName, setTeacherName] = React.useState("");
-  const subjectForm = useForm<SubjectValues>({ defaultValues: { code: "", name: "", default_teacher: "" } });
+  const subjectForm = useForm<SubjectValues>({ defaultValues: { code: "", name: "", default_teacher: "", teacher_s1: "", teacher_s2: "" } });
   const names = teachers.map((t) => t.name);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
       <Card>
-        <CardHeader title="Předměty" description="Nabídka předmětů při úpravě rozvrhu (zkratka, název, výchozí učitel)." icon={<BookOpen className="size-5 text-muted" aria-hidden />} />
+        <CardHeader title="Předměty" description="Nabídka předmětů při úpravě rozvrhu. U dělených předmětů lze v úpravě (tužka) nastavit jiného učitele pro S1 a S2." icon={<BookOpen className="size-5 text-muted" aria-hidden />} />
         <form
           className="grid gap-3 border-b border-line/80 px-5 py-4 sm:grid-cols-[90px_1fr_1fr_auto] sm:items-end sm:px-6"
           noValidate

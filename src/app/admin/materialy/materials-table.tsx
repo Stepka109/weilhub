@@ -17,6 +17,7 @@ import { useAction } from "@/lib/use-action";
 import { formatDateTime } from "@/lib/dates";
 import { materialType } from "@/components/portal/shared";
 import type { AdminMaterialRow } from "@/lib/data/admin";
+import { GroupBadge } from "@/components/portal/group-badge";
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -96,6 +97,7 @@ export function MaterialsTable({ materials, subjects }: { materials: AdminMateri
                 </Td>
                 <Td label="Předmět" className="text-muted">
                   {m.subject?.name ?? "—"}
+                  <GroupBadge group={m.study_group} className="ml-1.5" />
                 </Td>
                 <Td label="Typ" className="text-muted">
                   {t.label}

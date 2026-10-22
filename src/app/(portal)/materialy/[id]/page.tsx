@@ -10,6 +10,7 @@ import { RichText } from "@/components/portal/rich-text";
 import { MaterialRow, SubjectBadge, materialType } from "@/components/portal/shared";
 import { FavoriteButton } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
+import { GroupBadge } from "@/components/portal/group-badge";
 import { getFavoriteIds, getMaterial, getMaterials } from "@/lib/data/portal";
 import { formatDate, formatTimestampDate } from "@/lib/dates";
 import { fileTypeOf } from "@/lib/files";
@@ -30,7 +31,12 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
 
   const [favorites, related] = await Promise.all([
     getFavoriteIds(user.id),
-    getMaterials({ subjectId: material.subject_id, topicId: material.topic_id ?? undefined, limit: 6 }),
+    getMaterials({
+      subjectId: material.subject_id,
+      topicId: material.topic_id ?? undefined,
+      limit: 6,
+      group: user.profile.preferences?.studyGroup ?? null,
+    }),
   ]);
   const type = materialType(material);
   const main = material.files.find((f) => f.role === "main");
@@ -47,6 +53,7 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
         eyebrow={
           <div className="flex flex-wrap gap-2">
             <SubjectBadge subject={material.subject} link />
+            <GroupBadge group={material.study_group} className="h-6" />
             <Badge tone="outline">
               <type.icon aria-hidden /> {type.label}
             </Badge>

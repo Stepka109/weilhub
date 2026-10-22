@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader, PillTabs } from "@/components/ui/misc";
 import { CalendarView } from "@/components/portal/calendar-view";
 import { KIND_META } from "@/components/portal/calendar-meta";
+import { getMyGroup } from "@/lib/auth";
 import { getCalendarItems } from "@/lib/data/portal";
 import { dateOnly, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/kalenda
     const m = format(monthStart, "LLLL yyyy", { locale: cs });
     title = m.charAt(0).toUpperCase() + m.slice(1);
   }
-  const items = await getCalendarItems(from, to);
+  const items = await getCalendarItems(from, to, await getMyGroup());
   const href = (params: Record<string, string>) => `/kalendar?${new URLSearchParams({ zobrazeni: view, ...params })}`;
 
   return (

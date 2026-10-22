@@ -1,11 +1,11 @@
 import { PageHeader, PillTabs } from "@/components/ui/misc";
-import { WeekNav } from "@/components/timetable/week-nav";
+import { GroupSwitch, WeekNav, groupQuery } from "@/components/timetable/week-nav";
 import { TimetableLegend } from "@/components/timetable/timetable-grid";
 import { requireStaff } from "@/lib/auth";
 import { getSettings } from "@/lib/data/portal";
 import { getTimetableCatalog, getTimetableWeek } from "@/lib/data/timetable";
 import { formatDate, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
-import { cycleWeekFor } from "@/lib/timetable";
+import { cycleWeekFor, parseGroupView } from "@/lib/timetable";
 import { TimetableEditor } from "./timetable-editor";
 import { CatalogManager } from "./catalog-manager";
 import { PeriodForm } from "./period-form";
@@ -22,13 +22,15 @@ export default async function AdminTimetablePage({ searchParams }: PageProps<"/a
   const [sp, user] = await Promise.all([searchParams, requireStaff()]);
   const section = SECTIONS.find((s) => s.key === sp.sekce)?.key ?? "rozvrh";
   const allLessons = sp.vse === "1";
+  const view = parseGroupView(sp.skupina) ?? "both";
+  const groupParam = `&skupina=${groupQuery(view)}`;
   const today = todayIso();
   const thisWeek = schoolWeek(today);
   const defaultMonday = today > thisWeek[4] ? shiftDate(thisWeek[0], 7) : thisWeek[0];
   const monday = typeof sp.tyden === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.tyden) ? schoolWeek(sp.tyden)[0] : defaultMonday;
 
   const [{ week, settings }, catalog, appSettings] = await Promise.all([
-    getTimetableWeek(monday, { allLessons }),
+    getTimetableWeek(monday, { allLessons, group: view }),
     getTimetableCatalog(),
     getSettings(),
   ]);
@@ -47,15 +49,16 @@ export default async function AdminTimetablePage({ searchParams }: PageProps<"/a
 
       {section === "rozvrh" && (
         <>
+          <GroupSwitch view={view} hrefFor={(q) => `/admin/rozvrh?tyden=${week.monday}&skupina=${q}${allLessons ? "&vse=1" : ""}`} />
           <WeekNav
             basePath="/admin/rozvrh"
             monday={week.monday}
             label={`${formatDate(week.monday, "d. M.")} – ${formatDate(week.days[4].date, "d. M. yyyy")}`}
             cycleWeek={week.cycleWeek}
             isCurrent={week.monday === defaultMonday}
-            extraQuery={allLessons ? "&vse=1" : ""}
+            extraQuery={`${groupParam}${allLessons ? "&vse=1" : ""}`}
           />
-          <TimetableEditor week={week} catalog={catalog} allLessons={allLessons} />
+          <TimetableEditor week={week} catalog={catalog} allLessons={allLessons} groupParam={groupParam} />
           <div className="mt-5">
             <TimetableLegend />
           </div>

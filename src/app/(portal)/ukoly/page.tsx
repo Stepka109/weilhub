@@ -7,6 +7,7 @@ import { DueBadge, SubjectBadge } from "@/components/portal/shared";
 import { CompletionToggle } from "@/components/portal/toggles";
 import { SubjectSelectFilter } from "@/components/portal/subject-select-filter";
 import { requireUser } from "@/lib/auth";
+import { GroupBadge } from "@/components/portal/group-badge";
 import { getAssignments, getSubjects } from "@/lib/data/portal";
 import { dueInfo, formatDate, formatDue } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ export default async function AssignmentsPage({ searchParams }: PageProps<"/ukol
   const [sp, user, subjects] = await Promise.all([searchParams, requireUser(), getSubjects()]);
   const filter = FILTERS.find((f) => f.key === sp.filtr)?.key ?? "";
   const subject = subjects.find((s) => s.slug === sp.predmet);
-  const all = await getAssignments(user.id, { subjectId: subject?.id });
+  const all = await getAssignments(user.id, { subjectId: subject?.id, group: user.profile.preferences?.studyGroup ?? null });
 
   const isOverdue = (a: (typeof all)[number]) => !a.completed && dueInfo(a.due_date).tone === "overdue";
   const counts = {
@@ -84,6 +85,7 @@ export default async function AssignmentsPage({ searchParams }: PageProps<"/ukol
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <SubjectBadge subject={a.subject} />
+                    <GroupBadge group={a.study_group} className="h-6" />
                     <DueBadge date={a.due_date} completed={a.completed} />
                   </div>
                   <Link href={`/ukoly/${a.id}`} className="mt-2.5 block">

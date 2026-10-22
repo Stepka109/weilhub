@@ -23,6 +23,8 @@ export interface Profile {
 export interface UserPreferences {
   hideCompleted?: boolean;
   compactLists?: boolean;
+  /** Skupina u dělených předmětů (S1 / S2) */
+  studyGroup?: "S1" | "S2" | null;
 }
 
 export interface AppSettings {
@@ -54,12 +56,20 @@ export interface Subject {
   icon: string;
   description: string | null;
   is_archived: boolean;
+  /** Předmět se učí zvlášť ve skupinách S1 a S2 */
+  has_groups: boolean;
+  /** Vyučující skupiny S1 / S2 (null = stejný jako u předmětu) */
+  teacher_s1: string | null;
+  teacher_s2: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
 }
 
 export type SubjectRef = Pick<Subject, "id" | "name" | "slug" | "abbreviation" | "color" | "icon">;
+
+/** Skupina u obsahu děleného předmětu (null = obě skupiny). */
+export type StudyGroup = "S1" | "S2";
 
 export interface SubjectTopic {
   id: string;
@@ -87,6 +97,7 @@ export interface Material {
   content: TiptapNode | null;
   content_text: string;
   material_date: string | null;
+  study_group: StudyGroup | null;
   status: PublicationStatus;
   published_at: string | null;
   created_at: string;
@@ -121,6 +132,7 @@ export interface Assignment {
   assigned_on: string;
   due_date: string;
   due_time: string | null;
+  study_group: StudyGroup | null;
   status: PublicationStatus;
   created_at: string;
   updated_at: string;
@@ -134,6 +146,7 @@ export interface Exam {
   exam_time: string | null;
   scope: string;
   notes: string;
+  study_group: StudyGroup | null;
   status: PublicationStatus;
   created_at: string;
   updated_at: string;

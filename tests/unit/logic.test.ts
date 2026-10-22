@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dueInfo, formatDue, schoolWeek } from "@/lib/dates";
-import { buildTimetableWeek, cycleWeekFor, effectiveCell, isSpan, markMatchesCell, placeMarks } from "@/lib/timetable";
+import { buildTimetableWeek, cycleWeekFor, effectiveCell, isSpan, isSplit, markMatchesCell, placeMarks, rowCells } from "@/lib/timetable";
 import { matchesSignature, validateFileMeta, sanitizeFileName } from "@/lib/files";
 import { renderTiptapHtml, safeHref, safeImageSrc, tiptapToText, inlineFileIds } from "@/lib/tiptap";
 import { isSafeExternalUrl, makeSnippet, slugify } from "@/lib/utils";
@@ -51,11 +51,63 @@ describe("rozvrh se střídáním týdnů", () => {
     const mark = (kind: "test" | "assignment", subjectAbbr: string, subjectName: string, date = "2026-10-12") =>
       ({ kind, id: subjectAbbr, title: "x", date, subjectAbbr, subjectName, href: "/" });
     const placed = placeMarks(week, [mark("test", "CHE", "Chemie"), mark("assignment", "Ch", "Chemie"), mark("test", "M", "Matematika")]);
-    expect(placed.get("2026-10-12:3")?.map((m) => m.kind)).toEqual(["test", "assignment"]);
-    expect(placed.has("2026-10-12:4")).toBe(false);
+    expect(placed.get("2026-10-12:3:all")?.map((m) => m.kind)).toEqual(["test", "assignment"]);
+    expect(placed.has("2026-10-12:4:all")).toBe(false);
     expect(placed.size).toBe(1);
     expect(markMatchesCell({ subjectAbbr: "ČJ", subjectName: "Český jazyk" }, { code: "CJL", name: "Český jazyk a literatura" })).toBe(true);
     expect(markMatchesCell({ subjectAbbr: "AJ", subjectName: "Anglický jazyk" }, { code: "CJL", name: "Český jazyk a literatura" })).toBe(false);
+  });
+
+  it("skupiny S1 a S2: vlastní hodina má přednost, obě skupiny se zobrazí rozděleně", () => {
+    const g = (x: ReturnType<typeof slot>, study_group: "all" | "S1" | "S2") => ({ ...x, study_group });
+    const slots = [g(slot("B", 1, 1, "MAT"), "all"), g(slot("B", 1, 2, "DIG", "S205"), "S2"), g(slot("B", 1, 2, "DIG", "S310"), "S1"), g(slot("B", 1, 3, "HDW"), "S2")];
+    const overrides = [ov({ week_start: "2026-10-12", day_of_week: 1, lesson_number: 1, kind: "cancelled", study_group: "S2" })];
+    const base = { monday: "2026-10-12", config: cfg, periods, slots, overrides, dayOverrides: [] };
+
+    const s1 = buildTimetableWeek({ ...base, group: "S1" }).days[0].items;
+    expect(s1.map((i) => (isSpan(i) || isSplit(i) ? "?" : `${i.code || "-"}/${i.group}/${i.status}`))).toEqual([
+      "MAT/all/default", "DIG/S1/default", "-/S1/empty",
+    ]);
+    const s2 = buildTimetableWeek({ ...base, group: "S2" }).days[0].items;
+    expect(s2.map((i) => (isSpan(i) || isSplit(i) ? "?" : `${i.code || "-"}/${i.group}/${i.status}`))).toEqual([
+      "MAT/S2/cancelled", "DIG/S2/default", "HDW/S2/default",
+    ]);
+
+    const both = buildTimetableWeek({ ...base, group: "both" }).days[0];
+    expect(both.items.map((i) => (isSplit(i) ? "split" : isSpan(i) ? "span" : i.status))).toEqual(["split", "split", "split"]);
+    const [mat, dig, hdw] = both.items.filter(isSplit);
+    expect([mat.s1.status, mat.s2.status]).toEqual(["default", "cancelled"]);
+    expect([dig.s1.room, dig.s2.room]).toEqual(["S310", "S205"]);
+    expect([hdw.s1.status, hdw.s2.code]).toEqual(["empty", "HDW"]);
+    expect(rowCells(both)).toHaveLength(6);
+
+    // Bez změny jen pro jednu skupinu je hodina celé třídy jedna karta
+    const plain = buildTimetableWeek({ ...base, overrides: [], group: "both" }).days[0].items[0];
+    expect(isSplit(plain) || isSpan(plain) ? null : plain.group).toBe("all");
+  });
+
+  it("když obě skupiny odpadají nebo mají stejnou akci, je to jedna karta", () => {
+    const g = (x: ReturnType<typeof slot>, study_group: "S1" | "S2") => ({ ...x, study_group });
+    const slots = [g(slot("B", 1, 1, "DIP"), "S1"), g(slot("B", 1, 1, "WWW"), "S2"), g(slot("B", 1, 2, "DIG"), "S1"), g(slot("B", 1, 2, "DIG", "S205"), "S2"), slot("B", 1, 3, "MAT")];
+    const overrides = [
+      ov({ week_start: "2026-10-12", day_of_week: 1, lesson_number: 1, kind: "cancelled", study_group: "all" }),
+      ov({ week_start: "2026-10-12", day_of_week: 1, lesson_number: 2, kind: "event", subject_code: "TH", title: "Třídnická hodina", study_group: "all" }),
+      ov({ week_start: "2026-10-12", day_of_week: 1, lesson_number: 3, kind: "event", subject_code: "TH", title: "Třídnická hodina", study_group: "all" }),
+    ];
+    const items = buildTimetableWeek({ monday: "2026-10-12", config: cfg, periods, slots, overrides, dayOverrides: [], group: "both" }).days[0].items;
+    const [first, second] = items;
+    expect(isSplit(first) || isSpan(first) ? null : [first.status, first.group, first.merged]).toEqual(["cancelled", "all", true]);
+    // Akce obou skupin navazuje na akci celé třídy → jedna karta přes 2.–3. hodinu
+    expect(isSpan(second) && [second.startLesson, second.endLesson]).toEqual([2, 3]);
+  });
+
+  it("značka testu skupiny S1 patří jen k hodině S1", () => {
+    const slots = [{ ...slot("B", 1, 2, "ANG", "N108"), subject_name: "Anglický jazyk", study_group: "S1" as const }, { ...slot("B", 1, 3, "ANG", "N312"), subject_name: "Anglický jazyk", study_group: "S2" as const }];
+    const week = buildTimetableWeek({ monday: "2026-10-12", config: cfg, periods, slots, overrides: [], dayOverrides: [], group: "both" });
+    const mark = (group: "S1" | "S2" | null) => ({ kind: "test" as const, id: String(group), title: "x", date: "2026-10-12", subjectAbbr: "AJ", subjectName: "Anglický jazyk", href: "/", group });
+    const placed = placeMarks(week, [mark("S2"), mark(null)]);
+    expect([...placed.keys()].sort()).toEqual(["2026-10-12:2:S1", "2026-10-12:3:S2"]);
+    expect(placed.get("2026-10-12:3:S2")?.map((m) => m.id)).toEqual(["S2"]);
   });
 
   it("použije výchozí rozvrh správného týdne cyklu", () => {
@@ -65,7 +117,7 @@ describe("rozvrh se střídáním týdnů", () => {
     });
     expect(week.cycleWeek).toBe("B");
     const first = week.days[0].items[0];
-    expect(isSpan(first) ? null : first.code).toBe("EKA");
+    expect(isSpan(first) || isSplit(first) ? null : first.code).toBe("EKA");
   });
 
   it("rozliší suplování, změnu místnosti, novou hodinu a odpadlou hodinu", () => {

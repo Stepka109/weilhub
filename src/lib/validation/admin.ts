@@ -30,6 +30,8 @@ const optionalTime = z
 export const publicationStatus = z.enum(["draft", "published", "archived"]);
 const iconKey = z.string().refine((v) => v in PICKABLE_ICONS, "Vyberte ikonku z nabídky.");
 const uuid = z.uuid("Neplatný výběr.");
+/** Skupina u děleného předmětu; prázdná = obě skupiny */
+const studyGroup = z.preprocess((v) => (v === "" || v === undefined ? null : v), z.enum(["S1", "S2"]).nullable());
 
 export const subjectSchema = z.object({
   name: z.string().trim().min(1, "Zadejte název předmětu.").max(80),
@@ -45,6 +47,9 @@ export const subjectSchema = z.object({
   icon: iconKey,
   description: optionalText(2000),
   is_archived: z.boolean(),
+  has_groups: z.boolean().default(false),
+  teacher_s1: optionalText(120),
+  teacher_s2: optionalText(120),
 });
 
 export const topicSchema = z.object({
@@ -67,6 +72,7 @@ export const materialSchema = z
     description: optionalText(1000),
     content: z.unknown().optional(),
     material_date: optionalDate,
+    study_group: studyGroup,
     status: publicationStatus,
   });
 
@@ -78,6 +84,7 @@ export const assignmentSchema = z
     assigned_on: date,
     due_date: date,
     due_time: optionalTime,
+    study_group: studyGroup,
     status: publicationStatus,
     material_ids: z.array(uuid).max(50).default([]),
   })
@@ -90,6 +97,7 @@ export const examSchema = z.object({
   exam_time: optionalTime,
   scope: z.string().trim().max(5000),
   notes: z.string().trim().max(5000),
+  study_group: studyGroup,
   status: publicationStatus,
   material_ids: z.array(uuid).max(50).default([]),
 });

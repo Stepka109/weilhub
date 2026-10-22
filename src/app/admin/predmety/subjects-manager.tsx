@@ -44,6 +44,9 @@ interface SubjectValues {
   icon: string;
   description: string;
   is_archived: boolean;
+  has_groups: boolean;
+  teacher_s1: string;
+  teacher_s2: string;
 }
 
 function SubjectDialog({ subject, open, onOpenChange }: { subject: Row | null; open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -58,6 +61,9 @@ function SubjectDialog({ subject, open, onOpenChange }: { subject: Row | null; o
       icon: subject?.icon ?? "book-open",
       description: subject?.description ?? "",
       is_archived: subject?.is_archived ?? false,
+      has_groups: subject?.has_groups ?? false,
+      teacher_s1: subject?.teacher_s1 ?? "",
+      teacher_s2: subject?.teacher_s2 ?? "",
     },
   });
   const { register, handleSubmit, control, formState, setError, watch } = form;
@@ -103,6 +109,31 @@ function SubjectDialog({ subject, open, onOpenChange }: { subject: Row | null; o
           <Field label="Popis" htmlFor="s-desc" hint="Nepovinné – zobrazí se v detailu předmětu.">
             <Textarea id="s-desc" rows={3} {...register("description")} />
           </Field>
+          <Controller
+            control={control}
+            name="has_groups"
+            render={({ field }) => (
+              <label className="flex items-center justify-between gap-4 rounded-2xl bg-bg px-4 py-3">
+                <span>
+                  <span className="block font-medium text-ink">Dělí se na skupiny S1 a S2</span>
+                  <span className="block text-sm text-muted">
+                    U materiálů, úkolů a testů pak lze zvolit skupinu. Studenti mají v předmětu záložky S1 a S2.
+                  </span>
+                </span>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </label>
+            )}
+          />
+          {watch("has_groups") && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Vyučující skupiny S1" htmlFor="s-teacher-s1" hint="Prázdné = stejný jako výše.">
+                <Input id="s-teacher-s1" {...register("teacher_s1")} />
+              </Field>
+              <Field label="Vyučující skupiny S2" htmlFor="s-teacher-s2" hint="Prázdné = stejný jako výše.">
+                <Input id="s-teacher-s2" {...register("teacher_s2")} />
+              </Field>
+            </div>
+          )}
           <Controller
             control={control}
             name="is_archived"
@@ -258,6 +289,7 @@ export function SubjectsManager({ subjects, openNew }: { subjects: Row[]; openNe
                     <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
                       {s.name}
                       <Badge tone="outline">{s.abbreviation}</Badge>
+                      {s.has_groups && <Badge tone="lavender">Skupiny S1 / S2</Badge>}
                       {s.is_archived ? <Badge tone="slate">Archivovaný</Badge> : <Badge tone="mint">Aktivní</Badge>}
                     </p>
                     <p className="truncate text-sm text-muted">

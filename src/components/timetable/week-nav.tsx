@@ -45,3 +45,55 @@ export function WeekNav({
     </div>
   );
 }
+
+const GROUP_OPTIONS = [
+  { view: "S1", q: "s1", label: "Skupina S1", short: "S1" },
+  { view: "both", q: "obe", label: "Obě skupiny", short: "Obě" },
+  { view: "S2", q: "s2", label: "Skupina S2", short: "S2" },
+] as const;
+
+export const groupQuery = (view: "S1" | "S2" | "both") => GROUP_OPTIONS.find((o) => o.view === view)!.q;
+
+/** Přepínač skupin: vlevo S1, uprostřed obě skupiny, vpravo S2. */
+export function GroupSwitch({
+  view,
+  myGroup,
+  hrefFor,
+  label = "Skupina",
+}: {
+  view: "S1" | "S2" | "both";
+  myGroup?: "S1" | "S2" | null;
+  /** Adresa pro hodnotu parametru `skupina` (s1 / obe / s2) */
+  hrefFor: (q: string) => string;
+  label?: string;
+}) {
+  return (
+    <nav aria-label={label} className="mb-3">
+      <ul className="mx-auto grid max-w-lg grid-cols-3 gap-1 rounded-full border border-line bg-card p-1 shadow-card">
+        {GROUP_OPTIONS.map((o) => {
+          const active = view === o.view;
+          return (
+            <li key={o.q}>
+              <Link
+                href={hrefFor(o.q)}
+                scroll={false}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex h-10 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold whitespace-nowrap transition-colors duration-150",
+                  active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-slate-soft hover:text-ink",
+                )}
+              >
+                {o.view !== "both" && (
+                  <span className={cn("size-2 shrink-0 rounded-full", o.view === "S1" ? "bg-[#0b7d73]" : "bg-[#4b3fd1]", active && "ring-2 ring-white/70")} aria-hidden />
+                )}
+                <span className="sm:hidden">{o.short}</span>
+                <span className="max-sm:hidden">{o.label}</span>
+                {myGroup === o.view && <span className={cn("text-[11px] font-medium", active ? "text-white/80" : "text-muted")}>(moje)</span>}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}

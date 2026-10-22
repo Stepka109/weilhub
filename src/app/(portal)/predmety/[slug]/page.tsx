@@ -8,10 +8,14 @@ import { EmptyState, PageHeader, PillTabs } from "@/components/ui/misc";
 import { DueBadge, MaterialRow, SubjectIcon } from "@/components/portal/shared";
 import { MaterialFilters } from "@/components/portal/material-filters";
 import { CompletionToggle } from "@/components/portal/toggles";
+import { GroupBadge } from "@/components/portal/group-badge";
+import { GroupPicker } from "@/components/portal/group-picker";
+import { GroupSwitch, groupQuery } from "@/components/timetable/week-nav";
 import { requireUser } from "@/lib/auth";
 import { getAssignments, getExams, getMaterials, getSettings, getSubjectBySlug, getTopics } from "@/lib/data/portal";
 import { formatDate, formatDue, formatTime } from "@/lib/dates";
 import { subjectColor } from "@/lib/subject-style";
+import { parseGroupView } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata({ params }: PageProps<"/predmety/[slug]">) {
@@ -39,11 +43,24 @@ export default async function SubjectPage({ params, searchParams }: PageProps<"/
   const kind = sp.typ === "note" || sp.typ === "file" ? sp.typ : undefined;
   const topicId = typeof sp.tema === "string" ? sp.tema : undefined;
 
+  // Dělený předmět: obsah skupiny S1, S2, nebo obou (výchozí = vlastní skupina)
+  const myGroup = user.profile.preferences?.studyGroup ?? null;
+  const view = subject.has_groups ? (parseGroupView(sp.skupina) ?? myGroup ?? "both") : "both";
+  const group = view === "both" ? null : view;
+  const href = (q: { tab?: string; tema?: string; skupina?: string }) => {
+    const params = new URLSearchParams();
+    if (q.tab && q.tab !== "materialy") params.set("tab", q.tab);
+    if (q.tema) params.set("tema", q.tema);
+    if (subject.has_groups) params.set("skupina", q.skupina ?? groupQuery(view));
+    const s = params.toString();
+    return `/predmety/${subject.slug}${s ? `?${s}` : ""}`;
+  };
+
   const [topics, materials, assignments, exams] = await Promise.all([
     getTopics(subject.id),
-    tab === "materialy" ? getMaterials({ subjectId: subject.id, sort, kind, topicId }) : Promise.resolve([]),
-    tab === "ukoly" ? getAssignments(user.id, { subjectId: subject.id }) : Promise.resolve([]),
-    tab === "testy" ? getExams({ subjectId: subject.id, upcoming: true }) : Promise.resolve([]),
+    tab === "materialy" ? getMaterials({ subjectId: subject.id, sort, kind, topicId, group }) : Promise.resolve([]),
+    tab === "ukoly" ? getAssignments(user.id, { subjectId: subject.id, group }) : Promise.resolve([]),
+    tab === "testy" ? getExams({ subjectId: subject.id, upcoming: true, group }) : Promise.resolve([]),
   ]);
 
   return (
@@ -60,20 +77,47 @@ export default async function SubjectPage({ params, searchParams }: PageProps<"/
         eyebrow={
           <div className="flex flex-wrap gap-2">
             <Badge className={cn(c.bg, c.ink)}>{subject.abbreviation}</Badge>
-            {subject.teacher && (
+            {subject.has_groups && <Badge tone="lavender">Dělený předmět · S1 / S2</Badge>}
+            {subject.has_groups && (subject.teacher_s1 || subject.teacher_s2) ? (
+              (["S1", "S2"] as const).map((g) => {
+                const t = (g === "S1" ? subject.teacher_s1 : subject.teacher_s2) ?? subject.teacher;
+                return t ? (
+                  <Badge key={g} tone="outline">
+                    <UserRound aria-hidden /> {g}: {t}
+                  </Badge>
+                ) : null;
+              })
+            ) : subject.teacher ? (
               <Badge tone="outline">
                 <UserRound aria-hidden /> {subject.teacher}
               </Badge>
-            )}
+            ) : null}
           </div>
         }
       />
+
+      {subject.has_groups && (
+        <>
+          <GroupSwitch
+            view={view}
+            myGroup={myGroup}
+            label="Skupina předmětu"
+            hrefFor={(q) => href({ tab, tema: tab === "materialy" ? topicId : undefined, skupina: q })}
+          />
+          {!myGroup && <GroupPicker className="mb-4" />}
+          <p className="mb-4 text-center text-sm text-muted">
+            {view === "both"
+              ? "Zobrazen obsah obou skupin – u každé položky je štítek skupiny."
+              : `Obsah skupiny ${view} a společný obsah pro obě skupiny.`}
+          </p>
+        </>
+      )}
 
       <PillTabs
         label="Sekce předmětu"
         className="mb-6"
         items={TABS.map((t) => ({
-          href: `/predmety/${subject.slug}${t.key === "materialy" ? "" : `?tab=${t.key}`}`,
+          href: href({ tab: t.key }),
           label: t.label,
           active: tab === t.key,
         }))}
@@ -90,7 +134,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps<"/
                   return (
                     <li key={t.id || "all"} className="shrink-0">
                       <Link
-                        href={`/predmety/${subject.slug}${t.id ? `?tema=${t.id}` : ""}`}
+                        href={href({ tema: t.id || undefined })}
                         scroll={false}
                         aria-current={active ? "true" : undefined}
                         className={cn(
@@ -134,7 +178,10 @@ export default async function SubjectPage({ params, searchParams }: PageProps<"/
                 <li key={a.id} className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-bg">
                   <CompletionToggle assignmentId={a.id} completed={a.completed} title={a.title} />
                   <Link href={`/ukoly/${a.id}`} className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-ink">{a.title}</span>
+                    <span className="flex items-center gap-2">
+                      <GroupBadge group={a.study_group} />
+                      <span className="truncate font-medium text-ink">{a.title}</span>
+                    </span>
                     <span className="block text-sm text-muted">Termín: {formatDue(a.due_date, a.due_time)}</span>
                   </Link>
                   <DueBadge date={a.due_date} completed={a.completed} />
@@ -159,7 +206,10 @@ export default async function SubjectPage({ params, searchParams }: PageProps<"/
                       {e.exam_time && <span className="block font-normal text-muted">{formatTime(e.exam_time)}</span>}
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-ink">{e.title}</span>
+                      <span className="flex items-center gap-2">
+                        <GroupBadge group={e.study_group} />
+                        <span className="truncate font-medium text-ink">{e.title}</span>
+                      </span>
                       {e.scope && <span className="block truncate text-sm text-muted">{e.scope}</span>}
                     </span>
                   </Link>
@@ -183,7 +233,16 @@ export default async function SubjectPage({ params, searchParams }: PageProps<"/
             </div>
             <div>
               <dt className="text-sm text-muted">Vyučující</dt>
-              <dd className="mt-1 font-medium text-ink">{subject.teacher ?? "Neuvedeno"}</dd>
+              <dd className="mt-1 font-medium text-ink">
+                {subject.has_groups && (subject.teacher_s1 || subject.teacher_s2) ? (
+                  <>
+                    <span className="block">S1: {subject.teacher_s1 ?? subject.teacher ?? "Neuvedeno"}</span>
+                    <span className="block">S2: {subject.teacher_s2 ?? subject.teacher ?? "Neuvedeno"}</span>
+                  </>
+                ) : (
+                  (subject.teacher ?? "Neuvedeno")
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-sm text-muted">Počet témat</dt>

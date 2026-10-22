@@ -11,7 +11,7 @@ export default async function AdminExamsPage({ searchParams }: PageProps<"/admin
       <PageHeader title="Správa testů" description="Změna data se okamžitě projeví v kalendáři i na studentském dashboardu." />
       <ExamsManager
         exams={exams}
-        subjects={subjects.filter((s) => !s.is_archived).map((s) => ({ id: s.id, name: s.name }))}
+        subjects={subjects.filter((s) => !s.is_archived).map((s) => ({ id: s.id, name: s.name, has_groups: s.has_groups }))}
         materials={materials}
         openNew={sp.novy === "1"}
       />

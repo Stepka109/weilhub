@@ -58,7 +58,7 @@ export async function getAllSubjects(): Promise<(Subject & { topics: SubjectTopi
   }));
 }
 
-export type AdminMaterialRow = Pick<Material, "id" | "title" | "kind" | "status" | "updated_at" | "created_at" | "subject_id"> & {
+export type AdminMaterialRow = Pick<Material, "id" | "title" | "kind" | "status" | "updated_at" | "created_at" | "subject_id" | "study_group"> & {
   subject: SubjectRef | null;
   author: { display_name: string } | null;
   files: Pick<MaterialFile, "file_name" | "role">[];
@@ -68,7 +68,7 @@ export async function getAdminMaterials(limit?: number): Promise<AdminMaterialRo
   const supabase = await createClient();
   let q = supabase
     .from("materials")
-    .select(`id, title, kind, status, updated_at, created_at, subject_id, ${SUBJECT_REF}, author:profiles!materials_created_by_fkey(display_name), files:material_files(file_name, role)`)
+    .select(`id, title, kind, status, updated_at, created_at, subject_id, study_group, ${SUBJECT_REF}, author:profiles!materials_created_by_fkey(display_name), files:material_files(file_name, role)`)
     .order("updated_at", { ascending: false });
   if (limit) q = q.limit(limit);
   const { data, error } = await q;

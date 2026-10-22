@@ -10,6 +10,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { FileUploader } from "@/components/upload/file-uploader";
 import { MaterialPicker, type MaterialOption } from "@/components/admin/material-picker";
+import { StudyGroupField } from "@/components/admin/study-group-field";
 import { deleteFile } from "@/lib/actions/admin/files";
 import { saveAssignment } from "@/lib/actions/admin/materials";
 import { todayIso } from "@/lib/dates";
@@ -22,6 +23,7 @@ interface Values {
   assigned_on: string;
   due_date: string;
   due_time: string;
+  study_group: "" | "S1" | "S2";
   material_ids: string[];
 }
 
@@ -33,7 +35,7 @@ export function AssignmentForm({
   maxMb,
 }: {
   assignment: (Assignment & { files: AssignmentFile[]; materials: { material_id: string }[] }) | null;
-  subjects: { id: string; name: string }[];
+  subjects: { id: string; name: string; has_groups: boolean }[];
   materials: MaterialOption[];
   allowedTypes: string[];
   maxMb: number;
@@ -51,6 +53,7 @@ export function AssignmentForm({
       assigned_on: assignment?.assigned_on ?? todayIso(),
       due_date: assignment?.due_date ?? "",
       due_time: assignment?.due_time?.slice(0, 5) ?? "",
+      study_group: assignment?.study_group ?? "",
       material_ids: assignment?.materials.map((m) => m.material_id) ?? [],
     },
   });
@@ -59,7 +62,8 @@ export function AssignmentForm({
   async function persist(next: PublicationStatus) {
     setSaving(true);
     const values = getValues();
-    const res = await saveAssignment(id, { ...values, status: next }).catch(() => ({ ok: false as const, error: "Server je nedostupný." }));
+    const study_group = subjects.find((s) => s.id === values.subject_id)?.has_groups ? values.study_group : null;
+    const res = await saveAssignment(id, { ...values, study_group, status: next }).catch(() => ({ ok: false as const, error: "Server je nedostupný." }));
     setSaving(false);
     if (!res.ok) {
       toast.error(res.error);
@@ -153,6 +157,9 @@ export function AssignmentForm({
                 ))}
               </Select>
             </Field>
+            {subjects.find((s) => s.id === watch("subject_id"))?.has_groups && (
+              <StudyGroupField id="a-group" what="Úkol" {...register("study_group")} />
+            )}
             <Field label="Datum zadání" htmlFor="a-assigned" required error={e.assigned_on?.message}>
               <Input id="a-assigned" type="date" {...register("assigned_on", { required: "Zadejte datum." })} />
             </Field>

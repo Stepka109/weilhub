@@ -5,9 +5,11 @@ import {
   buildTimetableWeek,
   type CycleConfig,
   type DayOverride,
+  type GroupView,
   type Override,
   type Period,
   type Slot,
+  type StudyGroup,
   type TimetableMark,
   type TimetableWeek,
 } from "@/lib/timetable";
@@ -18,6 +20,9 @@ export interface TimetableSubject {
   code: string;
   name: string;
   default_teacher: string | null;
+  /** Učitel skupiny S1 / S2 (null = stejný jako výchozí) */
+  teacher_s1: string | null;
+  teacher_s2: string | null;
 }
 
 export interface TimetableTeacher {
@@ -37,7 +42,10 @@ export interface TimetablePageData {
 }
 
 /** Rozvrh jednoho týdne (čtení přes RLS – jen pro schválené uživatele). */
-export async function getTimetableWeek(monday: string, opts: { allLessons?: boolean } = {}): Promise<TimetablePageData> {
+export async function getTimetableWeek(
+  monday: string,
+  opts: { allLessons?: boolean; group?: GroupView } = {},
+): Promise<TimetablePageData> {
   const supabase = await createClient();
   const friday = shiftDate(monday, 4);
   const [settingsRes, periods, slots, overrides, dayOverrides, events] = await Promise.all([
@@ -46,7 +54,7 @@ export async function getTimetableWeek(monday: string, opts: { allLessons?: bool
       .select("timetable_cycle, timetable_reference_monday, timetable_reference_week, timetable_visible_from, timetable_visible_to")
       .single(),
     supabase.from("timetable_periods").select("lesson_number, start_time, end_time").order("lesson_number"),
-    supabase.from("timetable_slots").select("id, cycle_week, day_of_week, lesson_number, subject_code, subject_name, teacher, room"),
+    supabase.from("timetable_slots").select("id, cycle_week, day_of_week, lesson_number, subject_code, subject_name, teacher, room, study_group"),
     supabase.from("timetable_overrides").select("*").eq("week_start", monday),
     supabase.from("timetable_day_overrides").select("*").gte("date", monday).lte("date", friday),
     supabase
@@ -79,6 +87,7 @@ export async function getTimetableWeek(monday: string, opts: { allLessons?: bool
     visibleFrom: settings.visibleFrom,
     visibleTo: settings.visibleTo,
     allLessons: opts.allLessons,
+    group: opts.group,
   });
 
   return { week, settings, hasAnySlots: (slots.data ?? []).length > 0 };
@@ -87,7 +96,7 @@ export async function getTimetableWeek(monday: string, opts: { allLessons?: bool
 export async function getTimetableCatalog() {
   const supabase = await createClient();
   const [subjects, teachers] = await Promise.all([
-    supabase.from("timetable_subjects").select("id, code, name, default_teacher").order("code"),
+    supabase.from("timetable_subjects").select("id, code, name, default_teacher, teacher_s1, teacher_s2").order("code"),
     supabase.from("timetable_teachers").select("id, name").order("name"),
   ]);
   return {
@@ -109,16 +118,17 @@ export async function getTimetableMarks(monday: string): Promise<TimetableMark[]
   const friday = shiftDate(monday, 4);
   const subject = "subject:subjects!inner(name, abbreviation)";
   const [exams, assignments] = await Promise.all([
-    supabase.from("exams").select(`id, title, exam_date, ${subject}`).eq("status", "published").gte("exam_date", monday).lte("exam_date", friday),
-    supabase.from("assignments").select(`id, title, due_date, ${subject}`).eq("status", "published").gte("due_date", monday).lte("due_date", friday),
+    supabase.from("exams").select(`id, title, exam_date, study_group, ${subject}`).eq("status", "published").gte("exam_date", monday).lte("exam_date", friday),
+    supabase.from("assignments").select(`id, title, due_date, study_group, ${subject}`).eq("status", "published").gte("due_date", monday).lte("due_date", friday),
   ]);
   type Ref = { name: string; abbreviation: string };
+  type Group = { study_group: StudyGroup | null };
   const marks: TimetableMark[] = [];
-  for (const e of (exams.data ?? []) as unknown as { id: string; title: string; exam_date: string; subject: Ref }[]) {
-    marks.push({ kind: "test", id: e.id, title: e.title, date: e.exam_date, subjectName: e.subject.name, subjectAbbr: e.subject.abbreviation, href: `/testy#test-${e.id}` });
+  for (const e of (exams.data ?? []) as unknown as ({ id: string; title: string; exam_date: string; subject: Ref } & Group)[]) {
+    marks.push({ kind: "test", id: e.id, title: e.title, date: e.exam_date, subjectName: e.subject.name, subjectAbbr: e.subject.abbreviation, href: `/testy#test-${e.id}`, group: e.study_group });
   }
-  for (const a of (assignments.data ?? []) as unknown as { id: string; title: string; due_date: string; subject: Ref }[]) {
-    marks.push({ kind: "assignment", id: a.id, title: a.title, date: a.due_date, subjectName: a.subject.name, subjectAbbr: a.subject.abbreviation, href: `/ukoly/${a.id}` });
+  for (const a of (assignments.data ?? []) as unknown as ({ id: string; title: string; due_date: string; subject: Ref } & Group)[]) {
+    marks.push({ kind: "assignment", id: a.id, title: a.title, date: a.due_date, subjectName: a.subject.name, subjectAbbr: a.subject.abbreviation, href: `/ukoly/${a.id}`, group: a.study_group });
   }
   return marks;
 }

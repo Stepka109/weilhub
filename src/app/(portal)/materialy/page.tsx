@@ -27,6 +27,7 @@ export default async function MaterialsPage({ searchParams }: PageProps<"/materi
     kind,
     sort,
     ids: favoritesOnly ? [...favorites] : undefined,
+    group: user.profile.preferences?.studyGroup ?? null,
   });
 
   return (

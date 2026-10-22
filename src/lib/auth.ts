@@ -75,3 +75,9 @@ export async function getActionUser(minRole: "student" | "staff" | "admin" = "st
   }
   return { user: user as SessionUser & { profile: Profile } };
 }
+
+/** Skupina studenta u dělených předmětů (S1 / S2) z jeho předvoleb; null = nezvolena. */
+export async function getMyGroup() {
+  const user = await getSessionUser();
+  return user?.profile?.preferences?.studyGroup ?? null;
+}

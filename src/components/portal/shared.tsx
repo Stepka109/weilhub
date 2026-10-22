@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GroupBadge } from "@/components/portal/group-badge";
 import {
   AlarmClock,
   CalendarCheck2,
@@ -120,6 +121,7 @@ export function MaterialRow({ material, showSubject = true }: { material: Materi
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-ink transition-colors group-hover:text-primary">{material.title}</p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted">
+          <GroupBadge group={material.study_group} />
           <span>{t.label}</span>
           {showSubject && (
             <>

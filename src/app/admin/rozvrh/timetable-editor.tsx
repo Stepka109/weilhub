@@ -13,7 +13,7 @@ import { clearOverride, deleteDayOverride, deleteSlot, saveDayOverride, saveOver
 import { useAction } from "@/lib/use-action";
 import { WEEKDAYS, formatDate, formatTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import type { Cell, DayRow, TimetableWeek } from "@/lib/timetable";
+import type { Cell, DayRow, SlotGroup, TimetableWeek } from "@/lib/timetable";
 import type { TimetableSubject, TimetableTeacher } from "@/lib/data/timetable";
 
 type Mode = "default" | "changed" | "new" | "event" | "cancelled";
@@ -24,6 +24,12 @@ const MODES: { key: Mode; label: string; hint: string; icon: typeof Pencil; tone
   { key: "new", label: "Nová hodina", hint: "Dočasně navíc · N", icon: CalendarPlus, tone: "border-[#4f9a12]" },
   { key: "event", label: "Akce třídy", hint: "Zeleně · A", icon: CalendarCheck2, tone: "border-[#4f9a12] border-dashed" },
   { key: "cancelled", label: "Odpadá", hint: "Vyjmuto z rozvrhu", icon: CircleSlash, tone: "border-[#db2d2d] border-dashed" },
+];
+
+const GROUPS: { key: SlotGroup; label: string; hint: string }[] = [
+  { key: "all", label: "Celá třída", hint: "Obě skupiny" },
+  { key: "S1", label: "Skupina S1", hint: "Jen S1" },
+  { key: "S2", label: "Skupina S2", hint: "Jen S2" },
 ];
 
 interface CellValues {
@@ -56,6 +62,8 @@ function CellDialog({
   const [mode, setMode] = React.useState<Mode>(initialMode);
   const [error, setError] = React.useState<string | null>(null);
   const [accent, setAccent] = React.useState<"red" | "green">(ov?.kind === "cancelled" && ov.accent === "green" ? "green" : "red");
+  const initialGroup: SlotGroup = cell?.group ?? "all";
+  const [group, setGroup] = React.useState<SlotGroup>(initialGroup);
 
   const values: CellValues = {
     subject_code: (ov && (ov.kind === "changed" || ov.kind === "new") ? ov.subject_code : base?.subject_code) ?? "",
@@ -71,13 +79,14 @@ function CellDialog({
   const subjectCode = watch("subject_code");
 
   // Při otevření jiné hodiny nastavit odpovídající režim
-  const key = target ? `${target.row.date}-${target.cell.lesson}` : "";
+  const key = target ? `${target.row.date}-${target.cell.lesson}-${target.cell.group}` : "";
   const [lastKey, setLastKey] = React.useState(key);
   if (key !== lastKey) {
     setLastKey(key);
     setMode(initialMode);
     setError(null);
     setAccent(ov?.kind === "cancelled" && ov.accent === "green" ? "green" : "red");
+    setGroup(initialGroup);
   }
 
   if (!target || !cell) return null;
@@ -85,11 +94,25 @@ function CellDialog({
   const dayLabel = `${WEEKDAYS[target.row.day - 1]} ${formatDate(target.row.date)} · ${cell.lesson}. hodina${period ? ` (${formatTime(period.start_time)}–${formatTime(period.end_time)})` : ""}`;
   const teacherList = [...new Set([...catalog.teachers.map((t) => t.name), ...(values.teacher ? [values.teacher] : [])])];
 
+  /** Učitel předmětu pro zvolenou skupinu (S1 / S2 mohou mít jiného) */
+  function teacherFor(codeValue: string, g: SlotGroup) {
+    const s = catalog.subjects.find((x) => x.code === codeValue);
+    return (g === "S1" ? s?.teacher_s1 : g === "S2" ? s?.teacher_s2 : null) ?? s?.default_teacher ?? null;
+  }
+
   function onSubject(codeValue: string) {
     const s = catalog.subjects.find((x) => x.code === codeValue);
     setValue("subject_code", codeValue);
     setValue("subject_name", s?.name ?? "");
-    if (s?.default_teacher) setValue("teacher", s.default_teacher);
+    const t = teacherFor(codeValue, group);
+    if (t) setValue("teacher", t);
+  }
+
+  function onGroup(g: SlotGroup) {
+    setGroup(g);
+    // Při přepnutí skupiny nabídnout učitele té skupiny
+    const t = subjectCode && mode !== "event" && mode !== "cancelled" ? teacherFor(subjectCode, g) : null;
+    if (t) setValue("teacher", t);
   }
 
   const submit = handleSubmit(async (v) => {
@@ -98,7 +121,15 @@ function CellDialog({
     const res =
       mode === "default"
         ? await run(() =>
-            saveSlot({ ...common, cycle_week: week.cycleWeek, subject_code: v.subject_code, subject_name: v.subject_name, teacher: v.teacher, room: v.room }),
+            saveSlot({
+              ...common,
+              cycle_week: week.cycleWeek,
+              subject_code: v.subject_code,
+              subject_name: v.subject_name,
+              teacher: v.teacher,
+              room: v.room,
+              study_group: group,
+            }),
           )
         : await run(() =>
             saveOverride({
@@ -111,8 +142,9 @@ function CellDialog({
               teacher: v.teacher,
               room: v.room,
               note: v.note,
-              lesson_to: mode === "event" ? Number(v.lesson_to) : undefined,
+              lesson_to: mode === "event" || mode === "cancelled" ? Number(v.lesson_to) : undefined,
               accent: mode === "cancelled" ? accent : undefined,
+              study_group: group,
             }),
           );
     if (res.ok) {
@@ -125,6 +157,47 @@ function CellDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title="Úprava rozvrhu" description={`${dayLabel} · týden ${week.cycleWeek}`} wide>
         <form onSubmit={submit} className="space-y-5" noValidate>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-ink" id="tt-group-label">
+              Platí pro
+            </p>
+            <div role="radiogroup" aria-labelledby="tt-group-label" className="grid grid-cols-3 gap-2">
+              {GROUPS.map((g) => (
+                <button
+                  key={g.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={group === g.key}
+                  onClick={() => onGroup(g.key)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-2xl border-2 px-3 py-2.5 text-left transition-colors",
+                    group === g.key ? "border-primary bg-light-blue/40" : "border-line hover:border-[#cfd7e4]",
+                  )}
+                >
+                  {g.key === "all" ? (
+                    <span className="tt-group bg-slate-soft! text-slate-ink!">S1+2</span>
+                  ) : (
+                    <span className="tt-group" data-g={g.key}>
+                      {g.key}
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink">{g.label}</span>
+                    <span className="block text-xs text-muted max-sm:hidden">{g.hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            {group !== "all" && (base?.study_group ?? "all") === "all" && base && mode === "default" && (
+              <p className="mt-2 text-xs text-muted">
+                Vznikne samostatná hodina skupiny {group}. Druhá skupina si ponechá hodinu celé třídy ({base.subject_code}).
+              </p>
+            )}
+            {group === "all" && cell.group !== "all" && (
+              <p className="mt-2 text-xs text-muted">Uložením pro celou třídu se na tomto místě nahradí hodiny obou skupin.</p>
+            )}
+          </div>
+
           <div role="radiogroup" aria-label="Typ úpravy" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {MODES.filter((m) => m.key !== "cancelled" || base).map((m) => (
               <button
@@ -213,7 +286,7 @@ function CellDialog({
           {mode === "cancelled" && (
             <div className="space-y-4">
               <p className="rounded-2xl bg-rose px-4 py-3 text-sm text-rose-ink">
-                Hodina <strong>{base?.subject_name}</strong> v tomto týdnu odpadá. Výchozí rozvrh zůstane beze změny.
+                Hodina <strong>{cell.merged ? cell.name : base?.subject_name}</strong> v tomto týdnu odpadá. Výchozí rozvrh zůstane beze změny.
               </p>
               <div>
                 <p className="mb-1.5 text-sm font-medium text-ink" id="tt-accent-label">
@@ -254,9 +327,22 @@ function CellDialog({
                   ))}
                 </div>
               </div>
-              <Field label="Poznámka" htmlFor="tt-cnote" hint="Např. důvod (nemoc, exkurze…).">
-                <Input id="tt-cnote" {...register("note")} />
-              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Odpadá do hodiny" htmlFor="tt-cto" hint="Např. od 3. do 6. hodiny – zruší všechny hodiny v rozsahu.">
+                  <Select id="tt-cto" {...register("lesson_to")}>
+                    {week.lessons
+                      .filter((l) => l.lesson_number >= cell.lesson)
+                      .map((l) => (
+                        <option key={l.lesson_number} value={l.lesson_number}>
+                          {l.lesson_number === cell.lesson ? `jen ${l.lesson_number}. hodina` : `do ${l.lesson_number}. hodiny (${formatTime(l.end_time)})`}
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+                <Field label="Poznámka" htmlFor="tt-cnote" hint="Např. důvod (nemoc, exkurze…).">
+                  <Input id="tt-cnote" {...register("note")} />
+                </Field>
+              </div>
             </div>
           )}
 
@@ -279,7 +365,15 @@ function CellDialog({
                   variant="outline"
                   loading={pending}
                   onClick={async () => {
-                    const res = await run(() => clearOverride({ week_start: week.monday, day_of_week: target.row.day, lesson_number: cell.lesson }));
+                    const res = await run(() =>
+                      clearOverride({
+                        week_start: week.monday,
+                        day_of_week: target.row.day,
+                        lesson_number: cell.lesson,
+                        study_group: ov.study_group,
+                        every: cell.merged,
+                      }),
+                    );
                     if (res.ok) onClose();
                   }}
                 >
@@ -291,14 +385,16 @@ function CellDialog({
                   variant="danger-soft"
                   loading={pending}
                   onClick={async () => {
-                    const res = await run(() => deleteSlot({ cycle_week: week.cycleWeek, day_of_week: target.row.day, lesson_number: cell.lesson }));
+                    const res = await run(() =>
+                      deleteSlot({ cycle_week: week.cycleWeek, day_of_week: target.row.day, lesson_number: cell.lesson, study_group: base.study_group }),
+                    );
                     if (res.ok) {
                       reset();
                       onClose();
                     }
                   }}
                 >
-                  <Trash2 /> Smazat výchozí hodinu
+                  <Trash2 /> Smazat výchozí hodinu{base.study_group && base.study_group !== "all" ? ` ${base.study_group}` : ""}
                 </Button>
               )}
             </div>
@@ -417,10 +513,13 @@ export function TimetableEditor({
   week,
   catalog,
   allLessons,
+  groupParam,
 }: {
   week: TimetableWeek;
   catalog: { subjects: TimetableSubject[]; teachers: TimetableTeacher[] };
   allLessons: boolean;
+  /** `&skupina=…` – zachová zvolenou skupinu při přepnutí rozsahu hodin */
+  groupParam: string;
 }) {
   const [cellTarget, setCellTarget] = React.useState<{ cell: Cell; row: DayRow } | null>(null);
   const [dayTarget, setDayTarget] = React.useState<DayRow | null>(null);
@@ -428,9 +527,11 @@ export function TimetableEditor({
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">Klikněte na hodinu pro úpravu, na den (vlevo) pro volno nebo celodenní akci.</p>
+        <p className="text-sm text-muted">
+          Klikněte na hodinu pro úpravu (u rozdělené hodiny na část skupiny), na den vlevo pro volno nebo celodenní akci.
+        </p>
         <Button asChild variant={allLessons ? "secondary" : "outline"} size="sm">
-          <Link href={`/admin/rozvrh?tyden=${week.monday}${allLessons ? "" : "&vse=1"}`} scroll={false}>
+          <Link href={`/admin/rozvrh?tyden=${week.monday}${groupParam}${allLessons ? "" : "&vse=1"}`} scroll={false}>
             {allLessons ? "Zobrazit jen používané hodiny" : "Zobrazit 0.–15. hodinu"}
           </Link>
         </Button>

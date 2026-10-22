@@ -16,6 +16,7 @@ import { AnimatedIcon } from "@/components/icons/animated-icon";
 import { DueBadge, MaterialRow, SubjectBadge, SubjectIcon } from "@/components/portal/shared";
 import { CompletionToggle } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
+import { GroupBadge } from "@/components/portal/group-badge";
 import { getAnnouncements, getAssignments, getExams, getMaterials, getSettings } from "@/lib/data/portal";
 import { dueInfo, formatDate, formatDue, formatTime, greetingDate, shiftDate, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -32,11 +33,12 @@ const QUICK = [
 export default async function DashboardPage() {
   const user = await requireUser();
   const today = todayIso();
+  const group = user.profile.preferences?.studyGroup ?? null;
   const [assignments, exams, materials, announcements, settings] = await Promise.all([
     // Nesplněné úkoly včetně těch po termínu (za poslední 2 týdny)
-    getAssignments(user.id, { from: shiftDate(today, -14), onlyOpen: true, limit: 6 }),
-    getExams({ upcoming: true, limit: 5 }),
-    getMaterials({ limit: 6 }),
+    getAssignments(user.id, { from: shiftDate(today, -14), onlyOpen: true, limit: 6, group }),
+    getExams({ upcoming: true, limit: 5, group }),
+    getMaterials({ limit: 6, group }),
     getAnnouncements({ limit: 4 }),
     getSettings(),
   ]);
@@ -180,6 +182,7 @@ export default async function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <SubjectBadge subject={e.subject} />
+                        <GroupBadge group={e.study_group} className="h-6" />
                         <Badge tone={info.days <= 1 ? "orange" : "slate"}>
                           {info.label}
                           {e.exam_time ? ` · ${formatTime(e.exam_time)}` : ""}
@@ -224,7 +227,8 @@ export default async function DashboardPage() {
                     <Link href={`/ukoly/${a.id}`} className="min-w-0 flex-1">
                       <span className="line-clamp-2 block font-medium text-ink hover:text-primary sm:truncate">{a.title}</span>
                       <span className="block truncate text-sm text-muted">
-                        {a.subject.name} · {formatDue(a.due_date, a.due_time)}
+                        {a.subject.name}
+                        {a.study_group ? ` (${a.study_group})` : ""} · {formatDue(a.due_date, a.due_time)}
                       </span>
                     </Link>
                     <DueBadge date={a.due_date} />

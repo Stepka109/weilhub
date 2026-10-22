@@ -6,6 +6,7 @@ import { FileList } from "@/components/portal/file-list";
 import { DueBadge, MaterialRow, SubjectBadge } from "@/components/portal/shared";
 import { CompletionToggle } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
+import { GroupBadge } from "@/components/portal/group-badge";
 import { getAssignment } from "@/lib/data/portal";
 import { formatDate, formatDateTime, formatDue } from "@/lib/dates";
 
@@ -27,6 +28,7 @@ export default async function AssignmentDetailPage({ params }: PageProps<"/ukoly
         eyebrow={
           <div className="flex flex-wrap gap-2">
             <SubjectBadge subject={a.subject} link />
+            <GroupBadge group={a.study_group} className="h-6" />
             <DueBadge date={a.due_date} completed={completed} />
           </div>
         }

@@ -28,7 +28,7 @@ export default async function AdminAssignmentPage({ params }: PageProps<"/admin/
       />
       <AssignmentForm
         assignment={assignment}
-        subjects={subjects.filter((s) => !s.is_archived || s.id === assignment?.subject_id).map((s) => ({ id: s.id, name: s.name }))}
+        subjects={subjects.filter((s) => !s.is_archived || s.id === assignment?.subject_id).map((s) => ({ id: s.id, name: s.name, has_groups: s.has_groups }))}
         materials={materials}
         allowedTypes={settings?.allowed_file_types ?? ["pdf"]}
         maxMb={settings?.max_upload_mb ?? 25}

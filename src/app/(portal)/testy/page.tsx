@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader, PillTabs } from "@/components/ui/misc";
 import { SubjectBadge } from "@/components/portal/shared";
+import { getMyGroup } from "@/lib/auth";
+import { GroupBadge } from "@/components/portal/group-badge";
 import { getExams } from "@/lib/data/portal";
 import { dueInfo, formatDate, formatTime } from "@/lib/dates";
 
@@ -12,7 +14,7 @@ export const metadata = { title: "Testy" };
 export default async function ExamsPage({ searchParams }: PageProps<"/testy">) {
   const sp = await searchParams;
   const past = sp.zobrazit === "probehle";
-  const exams = await getExams({ upcoming: !past });
+  const exams = await getExams({ upcoming: !past, group: await getMyGroup() });
 
   return (
     <>
@@ -53,6 +55,7 @@ export default async function ExamsPage({ searchParams }: PageProps<"/testy">) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <SubjectBadge subject={e.subject} link />
+                        <GroupBadge group={e.study_group} className="h-6" />
                         {!past && <Badge tone={info.days <= 2 ? "orange" : "slate"}>{info.label}</Badge>}
                         {e.exam_time && (
                           <Badge tone="outline">
