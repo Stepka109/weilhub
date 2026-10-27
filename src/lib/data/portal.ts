@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { todayIso, shiftDate } from "@/lib/dates";
+import { nowMinutes, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
+import { getTimetableWeek } from "@/lib/data/timetable";
+import { examLessonEnd, minutes } from "@/lib/timetable";
 import type {
   Announcement,
   AppSettings,
@@ -191,17 +193,41 @@ export async function getExams(
     .eq("status", "published");
   if (opts.subjectId) q = q.eq("subject_id", opts.subjectId);
   if (opts.group) q = q.or(GROUP_FILTER(opts.group));
+  // Dnešní testy patří mezi proběhlé až po skončení jejich hodiny
   if (opts.upcoming === true) q = q.gte("exam_date", today).order("exam_date").order("exam_time", { nullsFirst: false });
-  else if (opts.upcoming === false) q = q.lt("exam_date", today).order("exam_date", { ascending: false });
+  else if (opts.upcoming === false) q = q.lte("exam_date", today).order("exam_date", { ascending: false });
   else q = q.order("exam_date");
-  if (opts.limit) q = q.limit(opts.limit);
+  if (opts.limit) q = q.limit(opts.limit + 10);
   const { data, error } = await q;
   if (error) throw error;
   // Odkazy jen na publikované materiály
-  return ((data ?? []) as unknown as ExamListItem[]).map((e) => ({
+  let items = ((data ?? []) as unknown as ExamListItem[]).map((e) => ({
     ...e,
     materials: e.materials.filter((m) => m.material && m.material.status === "published"),
   }));
+  if (opts.upcoming !== undefined && items.some((e) => e.exam_date === today)) {
+    const finished = await finishedToday(items.filter((e) => e.exam_date === today), opts.group ?? null);
+    items = items.filter((e) => e.exam_date !== today || finished.has(e.id) === !opts.upcoming);
+  }
+  return opts.limit ? items.slice(0, opts.limit) : items;
+}
+
+/** Dnešní testy, jejichž hodina už skončila (podle rozvrhu, případně času testu). */
+async function finishedToday(exams: ExamListItem[], group: StudyGroup | null): Promise<Set<string>> {
+  const today = todayIso();
+  const now = nowMinutes();
+  const { week } = await getTimetableWeek(schoolWeek(today)[0], { group: group ?? "both" });
+  const done = exams.filter((e) => {
+    const end = examLessonEnd(week, {
+      date: e.exam_date,
+      subjectName: e.subject.name,
+      subjectAbbr: e.subject.abbreviation,
+      group: e.study_group,
+      time: e.exam_time,
+    });
+    return end !== null && now >= minutes(end);
+  });
+  return new Set(done.map((e) => e.id));
 }
 
 export async function getAnnouncements(opts: { limit?: number } = {}) {

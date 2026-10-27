@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Download, ExternalLink, FolderOpen, PenLine, UserRound } from "lucide-react";
+import { CalendarDays, Download, ExternalLink, FileDown, FolderOpen, PenLine, UserRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,13 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
                 </a>
               </Button>
             )}
+            {material.kind === "note" && (
+              <Button asChild>
+                <Link href={`/tisk/materialy/${material.id}`}>
+                  <FileDown aria-hidden /> Stáhnout PDF
+                </Link>
+              </Button>
+            )}
             {isStaff && (
               <Button asChild variant="outline">
                 <Link href={`/admin/materialy/${material.id}`}>
@@ -102,16 +109,14 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
                     title={`Náhled: ${main.file_name}`}
                     className="h-[75dvh] min-h-[480px] w-full bg-bg"
                   />
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3 text-sm text-muted">
-                    <span className="truncate">{main.file_name}</span>
-                    <a href={`/api/soubory/${main.id}?inline=1`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-                      Otevřít v novém okně <ExternalLink className="size-3.5" aria-hidden />
-                    </a>
-                  </div>
+                  <FileBar fileId={main.id} fileName={main.file_name} />
                 </>
               ) : mainType?.inline === "image" ? (
-                // eslint-disable-next-line @next/next/no-img-element -- soubor za autorizovanou routou
-                <img src={`/api/soubory/${main.id}?inline=1`} alt={material.title} className="mx-auto max-h-[80dvh] w-auto" />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- soubor za autorizovanou routou */}
+                  <img src={`/api/soubory/${main.id}?inline=1`} alt={material.title} className="mx-auto max-h-[80dvh] w-auto" />
+                  <FileBar fileId={main.id} fileName={main.file_name} />
+                </>
               ) : (
                 <div className="flex flex-col items-center px-6 py-14 text-center">
                   <span className="grid size-16 place-items-center rounded-2xl bg-light-blue font-display text-sm font-bold text-primary uppercase">
@@ -195,5 +200,27 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
         </aside>
       </div>
     </>
+  );
+}
+
+/** Lišta pod náhledem souboru: název, otevření v novém okně a stažení. */
+function FileBar({ fileId, fileName }: { fileId: string; fileName: string }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line px-5 py-3 text-sm text-muted">
+      <span className="min-w-0 truncate">{fileName}</span>
+      <span className="flex items-center gap-4">
+        <a
+          href={`/api/soubory/${fileId}?inline=1`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+        >
+          Otevřít v novém okně <ExternalLink className="size-3.5" aria-hidden />
+        </a>
+        <a href={`/api/soubory/${fileId}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+          <Download className="size-3.5" aria-hidden /> Stáhnout
+        </a>
+      </span>
+    </div>
   );
 }

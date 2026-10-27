@@ -79,6 +79,15 @@ export function dueInfo(dueDate: string, today: string = todayIso()): DueInfo {
   return { days, tone: "later", label: `Za ${days} dní` };
 }
 
+/** Aktuální čas v Praze v minutách od půlnoci. */
+export function nowMinutes(now: Date = new Date()): number {
+  const [h, m] = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(now)
+    .split(":")
+    .map(Number);
+  return (h % 24) * 60 + m;
+}
+
 /** Pondělí až pátek týdne obsahujícího dané datum. */
 export function schoolWeek(iso: string): string[] {
   const monday = startOfISOWeek(dateOnly(iso));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dueInfo, formatDue, schoolWeek } from "@/lib/dates";
-import { buildTimetableWeek, cycleWeekFor, effectiveCell, isSpan, isSplit, markMatchesCell, placeMarks, rowCells } from "@/lib/timetable";
+import { buildTimetableWeek, cycleWeekFor, effectiveCell, examLessonEnd, isSpan, isSplit, markMatchesCell, placeMarks, rowCells } from "@/lib/timetable";
 import { matchesSignature, validateFileMeta, sanitizeFileName } from "@/lib/files";
 import { renderTiptapHtml, safeHref, safeImageSrc, tiptapToText, inlineFileIds } from "@/lib/tiptap";
 import { isSafeExternalUrl, makeSnippet, slugify } from "@/lib/utils";
@@ -99,6 +99,18 @@ describe("rozvrh se střídáním týdnů", () => {
     expect(isSplit(first) || isSpan(first) ? null : [first.status, first.group, first.merged]).toEqual(["cancelled", "all", true]);
     // Akce obou skupin navazuje na akci celé třídy → jedna karta přes 2.–3. hodinu
     expect(isSpan(second) && [second.startLesson, second.endLesson]).toEqual([2, 3]);
+  });
+
+  it("test proběhne po konci hodiny předmětu (nebo hodiny se zadaným časem)", () => {
+    const slots = [slot("B", 1, 1, "EKA"), { ...slot("B", 1, 3, "CHE"), subject_name: "Chemie" }];
+    const week = buildTimetableWeek({ monday: "2026-10-12", config: cfg, periods, slots, overrides: [], dayOverrides: [] });
+    const exam = { date: "2026-10-12", subjectAbbr: "CH", subjectName: "Chemie", group: null };
+    const end3 = week.lessons.find((l) => l.lesson_number === 3)!.end_time;
+    expect(examLessonEnd(week, exam)).toBe(end3);
+    expect(examLessonEnd(week, { ...exam, time: "08:10" })).toBe("08:45:00");
+    // Předmět ten den nemá hodinu → konec posledního vyučování
+    expect(examLessonEnd(week, { ...exam, subjectAbbr: "M", subjectName: "Matematika" })).toBe(end3);
+    expect(examLessonEnd(week, { ...exam, date: "2026-10-13" })).toBeNull();
   });
 
   it("značka testu skupiny S1 patří jen k hodině S1", () => {

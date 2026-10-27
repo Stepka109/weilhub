@@ -14,30 +14,31 @@ import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Úkoly" };
 
+// Výchozí přehled ukazuje jen úkoly k vypracování – splněné se přesunou do „Splněné“
 const FILTERS = [
-  { key: "", label: "Všechny" },
-  { key: "nesplnene", label: "Nesplněné" },
-  { key: "splnene", label: "Splněné" },
+  { key: "", label: "K vypracování" },
   { key: "po-terminu", label: "Po termínu" },
+  { key: "splnene", label: "Splněné" },
+  { key: "vse", label: "Všechny" },
 ] as const;
 
 export default async function AssignmentsPage({ searchParams }: PageProps<"/ukoly">) {
   const [sp, user, subjects] = await Promise.all([searchParams, requireUser(), getSubjects()]);
+  // „nesplnene“ = dřívější adresa výchozího přehledu
   const filter = FILTERS.find((f) => f.key === sp.filtr)?.key ?? "";
   const subject = subjects.find((s) => s.slug === sp.predmet);
   const all = await getAssignments(user.id, { subjectId: subject?.id, group: user.profile.preferences?.studyGroup ?? null });
 
   const isOverdue = (a: (typeof all)[number]) => !a.completed && dueInfo(a.due_date).tone === "overdue";
   const counts = {
-    "": all.length,
-    nesplnene: all.filter((a) => !a.completed).length,
-    splnene: all.filter((a) => a.completed).length,
+    "": all.filter((a) => !a.completed).length,
     "po-terminu": all.filter(isOverdue).length,
+    splnene: all.filter((a) => a.completed).length,
+    vse: all.length,
   };
   let items = all.filter((a) =>
-    filter === "nesplnene" ? !a.completed : filter === "splnene" ? a.completed : filter === "po-terminu" ? isOverdue(a) : true,
+    filter === "" ? !a.completed : filter === "splnene" ? a.completed : filter === "po-terminu" ? isOverdue(a) : true,
   );
-  if (filter === "" && user.profile.preferences?.hideCompleted) items = items.filter((a) => !a.completed);
   // Nadcházející nejdřív, proběhlé termíny na konec (nejnovější nahoře)
   const today = items.filter((a) => dueInfo(a.due_date).days >= 0);
   const past = items.filter((a) => dueInfo(a.due_date).days < 0).reverse();
@@ -72,8 +73,14 @@ export default async function AssignmentsPage({ searchParams }: PageProps<"/ukol
         <Card>
           <EmptyState
             icon={ClipboardCheck}
-            title={filter === "po-terminu" ? "Nic po termínu" : "Žádné úkoly"}
-            description={filter === "splnene" ? "Zatím nemáš žádný úkol označený jako splněný." : "V tomto výběru nejsou žádné úkoly."}
+            title={filter === "po-terminu" ? "Nic po termínu" : filter === "" ? "Všechno hotovo" : "Žádné úkoly"}
+            description={
+              filter === "splnene"
+                ? "Zatím nemáš žádný úkol označený jako splněný."
+                : filter === ""
+                  ? "Nemáš žádný nesplněný úkol. Splněné najdeš v záložce Splněné."
+                  : "V tomto výběru nejsou žádné úkoly."
+            }
           />
         </Card>
       ) : (

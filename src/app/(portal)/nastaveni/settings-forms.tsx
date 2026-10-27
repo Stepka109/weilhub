@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form-controls";
-import { Switch } from "@/components/ui/switch";
 import { signOut, updatePassword } from "@/lib/actions/auth";
 import { updatePreferences } from "@/lib/actions/student";
 import { newPasswordSchema } from "@/lib/validation/auth";
@@ -39,13 +38,6 @@ export function SettingsForms({ preferences, email }: { preferences: UserPrefere
       <Card>
         <CardHeader title="Zobrazení" description="Předvolby se ukládají k tvému účtu." />
         <CardBody className="space-y-5">
-          <label className="flex cursor-pointer items-center justify-between gap-4">
-            <span>
-              <span className="block font-medium text-ink">Skrýt splněné úkoly</span>
-              <span className="block text-sm text-muted">V přehledu „Všechny“ se zobrazí jen nesplněné úkoly.</span>
-            </span>
-            <Switch checked={!!prefs.hideCompleted} disabled={pending} onCheckedChange={(v) => savePref("hideCompleted", v)} />
-          </label>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span>
               <span className="block font-medium text-ink" id="pref-group">

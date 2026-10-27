@@ -404,3 +404,27 @@ export function placeMarks(week: TimetableWeek, marks: TimetableMark[]): Map<str
   }
   return placed;
 }
+
+/**
+ * Kdy skončí hodina, ve které se píše test (HH:MM:SS). Zadaný čas testu
+ * určí hodinu přímo; jinak se vezme první hodina předmětu v ten den (jako
+ * u odznaku T). Bez shody platí konec posledního vyučování v daný den.
+ */
+export function examLessonEnd(
+  week: TimetableWeek,
+  exam: Pick<TimetableMark, "date" | "subjectName" | "subjectAbbr" | "group"> & { time?: string | null },
+): string | null {
+  const row = week.days.find((d) => d.date === exam.date);
+  if (!row) return null;
+  const periodEnd = (lesson: number) => week.lessons.find((l) => l.lesson_number === lesson)?.end_time ?? null;
+  if (exam.time) {
+    const start = minutes(exam.time);
+    const period = week.lessons.find((l) => start >= minutes(l.start_time) && start < minutes(l.end_time));
+    if (period) return period.end_time;
+  }
+  const cells = rowCells(row).filter((c) => c.status !== "empty" && c.status !== "event");
+  const fit = cells.find((c) => (!exam.group || c.group === "all" || c.group === exam.group) && markMatchesCell(exam, c));
+  if (fit) return periodEnd(fit.lesson);
+  const last = cells.reduce((max, c) => Math.max(max, c.lesson), -1);
+  return last >= 0 ? periodEnd(last) : null;
+}

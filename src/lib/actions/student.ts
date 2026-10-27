@@ -9,7 +9,15 @@ import type { ActionResult } from "@/lib/types";
 const uuid = z.uuid();
 
 /** Osobní označení úkolu jako splněného – soukromé pro daného uživatele. */
-export async function setAssignmentCompleted(assignmentId: string, completed: boolean): Promise<ActionResult> {
+/**
+ * `refresh: false` – stránku obnoví až klient (seznam úkolů nechá splněný
+ * úkol pár sekund na místě a teprve potom ho přesune do splněných).
+ */
+export async function setAssignmentCompleted(
+  assignmentId: string,
+  completed: boolean,
+  opts: { refresh?: boolean } = {},
+): Promise<ActionResult> {
   const auth = await getActionUser();
   if ("error" in auth) return { ok: false, error: auth.error };
   if (!uuid.safeParse(assignmentId).success) return { ok: false, error: "Neplatný úkol." };
@@ -22,7 +30,7 @@ export async function setAssignmentCompleted(assignmentId: string, completed: bo
     : await supabase.from("assignment_completions").delete().eq("assignment_id", assignmentId).eq("user_id", auth.user.id);
 
   if (error) return { ok: false, error: "Stav úkolu se nepodařilo uložit." };
-  revalidatePath("/", "layout");
+  if (opts.refresh !== false) revalidatePath("/", "layout");
   return { ok: true };
 }
 
