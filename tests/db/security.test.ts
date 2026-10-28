@@ -328,3 +328,37 @@ describe("rozvrh se střídáním týdnů", () => {
     ).rejects.toThrow(/check constraint/);
   });
 });
+
+describe("widget rozvrhu", () => {
+  const HASH_A = "a".repeat(64);
+  const HASH_P = "b".repeat(64);
+  const call = async (hash: string) =>
+    (await db.query<{ data: unknown }>("select public.widget_timetable($1, '2026-10-19', '2026-10-30') as data", [hash])).rows[0].data;
+
+  it("student si může vytvořit jen vlastní klíč", async () => {
+    await asUser(db, studentId);
+    await db.query("insert into public.widget_tokens (token_hash) values ($1)", [HASH_A]);
+    await expect(
+      db.query("insert into public.widget_tokens (user_id, token_hash) values ($1, $2)", [editorId, "c".repeat(64)]),
+    ).rejects.toThrow(/row-level security/);
+    await asUser(db, editorId);
+    expect(await count("select 1 from public.widget_tokens")).toBe(0);
+  });
+
+  it("platný klíč vydá rozvrh, neplatný ani anonymní čtení tabulky ne", async () => {
+    await asAnon(db);
+    const data = (await call(HASH_A)) as { slots: unknown[]; periods: unknown[]; settings: { cycle: string[] } };
+    expect(data.slots.length).toBeGreaterThan(100);
+    expect(data.settings.cycle).toEqual(["A", "E", "B", "F"]);
+    expect(await call("f".repeat(64))).toBeNull();
+    expect(await call("neplatny")).toBeNull();
+    await expect(db.query("select * from public.widget_tokens")).rejects.toThrow(/permission denied/);
+  });
+
+  it("neschválený uživatel widget nepoužije", async () => {
+    await asSuperuser(db);
+    await db.query("insert into public.widget_tokens (user_id, token_hash) values ($1, $2)", [pendingId, HASH_P]);
+    await asAnon(db);
+    expect(await call(HASH_P)).toBeNull();
+  });
+});

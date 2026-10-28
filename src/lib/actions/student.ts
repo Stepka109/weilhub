@@ -5,11 +5,12 @@ import { z } from "zod";
 import { getActionUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
+import { newWidgetToken, widgetTokenHash } from "@/lib/widget-token";
 
 const uuid = z.uuid();
 
-/** Osobní označení úkolu jako splněného – soukromé pro daného uživatele. */
 /**
+ * Osobní označení úkolu jako splněného – soukromé pro daného uživatele.
  * `refresh: false` – stránku obnoví až klient (seznam úkolů nechá splněný
  * úkol pár sekund na místě a teprve potom ho přesune do splněných).
  */
@@ -120,4 +121,36 @@ export async function updatePreferences(input: z.input<typeof prefsSchema>): Pro
   if (error) return { ok: false, error: "Nastavení se nepodařilo uložit." };
   revalidatePath("/", "layout");
   return { ok: true, message: "Nastavení bylo uloženo." };
+}
+
+/**
+ * Vytvoří nový osobní klíč pro widget rozvrhu (iPhone / Scriptable).
+ * Klíč se vrátí jen teď – v databázi je uložen pouze jeho otisk.
+ * Případný starý klíč tím přestane fungovat.
+ */
+export async function createWidgetToken(): Promise<ActionResult<{ token: string }>> {
+  const auth = await getActionUser();
+  if ("error" in auth) return { ok: false, error: auth.error };
+  const token = newWidgetToken();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("widget_tokens")
+    .upsert(
+      { user_id: auth.user.id, token_hash: widgetTokenHash(token), created_at: new Date().toISOString(), last_used_at: null },
+      { onConflict: "user_id" },
+    );
+  if (error) return { ok: false, error: "Klíč widgetu se nepodařilo vytvořit." };
+  revalidatePath("/nastaveni");
+  return { ok: true, data: { token }, message: "Skript widgetu je připravený." };
+}
+
+/** Zruší widget – skript v telefonu přestane načítat rozvrh. */
+export async function deleteWidgetToken(): Promise<ActionResult> {
+  const auth = await getActionUser();
+  if ("error" in auth) return { ok: false, error: auth.error };
+  const supabase = await createClient();
+  const { error } = await supabase.from("widget_tokens").delete().eq("user_id", auth.user.id);
+  if (error) return { ok: false, error: "Widget se nepodařilo zrušit." };
+  revalidatePath("/nastaveni");
+  return { ok: true, message: "Widget byl zrušen." };
 }
