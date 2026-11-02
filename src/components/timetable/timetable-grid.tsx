@@ -25,6 +25,7 @@ const TAG: Partial<Record<Cell["status"], string>> = {
   roomchanged: "M",
   event: "A",
   cancelled: "O",
+  new: "N",
 };
 
 const MARK_LETTER: Record<TimetableMark["kind"], string> = { test: "T", assignment: "U" };
@@ -251,7 +252,6 @@ export function TimetableGrid({
       >
         {tag && <span className="tt-tag">{tag}</span>}
         {cell.group !== "all" && <span className="tt-group" data-g={cell.group}>{cell.group}</span>}
-        {cell.status === "new" && <span className="tt-badge-n">N</span>}
         {/* Odpadlá hodina je uprostřed prázdná – jen ohraničení a odznak O */}
         {!cancelled && <span className="tt-code">{cell.code}</span>}
         {!cancelled && cell.room && <span className="tt-room">{cell.room}</span>}
