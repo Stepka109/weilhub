@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const controlBase =
-  "w-full rounded-control border border-line bg-card px-4 text-[0.95rem] text-ink placeholder:text-[#8d96a6] transition-[border-color,box-shadow] duration-150 outline-none hover:border-[#cfd7e4] focus:border-primary focus:ring-4 focus:ring-primary/12 disabled:cursor-not-allowed disabled:bg-bg disabled:opacity-70 aria-[invalid=true]:border-rose-ink aria-[invalid=true]:focus:ring-rose-ink/12";
+  "w-full rounded-control border border-line bg-card px-4 text-[0.95rem] text-ink placeholder:text-[#8693a3] transition-[border-color,box-shadow] duration-150 outline-none hover:border-[#cfd7e4] focus:border-primary focus:ring-4 focus:ring-primary/12 disabled:cursor-not-allowed disabled:bg-bg disabled:opacity-70 aria-[invalid=true]:border-rose-ink aria-[invalid=true]:focus:ring-rose-ink/12";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {

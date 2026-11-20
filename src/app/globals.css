@@ -1,25 +1,37 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   WeilHub – design tokeny
+   WeilHub – design tokeny v barvách Weilovky
+   (tmavě modrá #1b3a6b, tyrkysová, azurová a limetková z loga školy).
+   Názvy tokenů zůstaly původní: „blue“ = hlavní akční barva (tyrkysová).
+   Rozvrh si drží vlastní barvy – viz timetable.css.
    ========================================================================== */
 :root {
-  --wh-blue: #2f68ff;
-  --wh-blue-hover: #2257e6;
-  --wh-navy: #14213d;
-  --wh-light-blue: #dce9ff;
-  --wh-bg: #f7f9fc;
+  --wh-blue: #0a7c83; /* tyrkysová Weilovky, ztmavená kvůli kontrastu bílého textu (WCAG AA) */
+  --wh-blue-hover: #08666c;
+  --wh-navy: #1b3a6b;
+  --wh-light-blue: #dbf2f1;
+  --wh-bg: #f4f7f8;
   --wh-card: #ffffff;
-  --wh-text: #14213d;
-  --wh-muted: #5f6878; /* Slate ztmavená kvůli kontrastu WCAG AA na pozadí */
-  --wh-border: #e5eaf2;
+  --wh-text: #162b4f;
+  --wh-muted: #5b6676; /* Slate ztmavená kvůli kontrastu WCAG AA na pozadí */
+  --wh-border: #e0e8ec;
+
+  /* Další barvy loga Weilovky */
+  --wh-teal: #12a39b;
+  --wh-cyan: #1fc2ca;
+  --wh-cyan-soft: #d8f4f6;
+  --wh-cyan-ink: #08636b;
+  --wh-lime: #8dc63f;
+  --wh-lime-soft: #edf6dc;
+  --wh-lime-ink: #3f6512;
   --wh-mint: #cff7e8;
   --wh-yellow: #ffe8a3;
   --wh-lavender: #eee5ff;
   --wh-red: #ffe4e8;
   --wh-sky: #d9f2ff;
   --wh-orange: #ffe6d3;
-  --wh-slate: #eef1f6;
+  --wh-slate: #edf2f4;
 
   /* Sytější tóny pro text na pastelových plochách */
   --wh-mint-ink: #0d6b4b;
@@ -36,9 +48,11 @@
   --wh-radius-control: 14px;
   --wh-radius-pill: 9999px;
 
-  --wh-shadow-card: 0 1px 2px rgba(20, 33, 61, 0.04), 0 8px 24px -12px rgba(20, 33, 61, 0.1);
-  --wh-shadow-hover: 0 2px 4px rgba(20, 33, 61, 0.05), 0 16px 32px -14px rgba(20, 33, 61, 0.18);
-  --wh-shadow-pop: 0 12px 40px -8px rgba(20, 33, 61, 0.22);
+  --wh-shadow-card: 0 1px 2px rgba(27, 58, 107, 0.04), 0 8px 24px -12px rgba(27, 58, 107, 0.1);
+  --wh-shadow-hover: 0 2px 4px rgba(27, 58, 107, 0.05), 0 16px 32px -14px rgba(27, 58, 107, 0.18);
+  --wh-shadow-pop: 0 12px 40px -8px rgba(27, 58, 107, 0.22);
+  /* Stín pod tyrkysovými tlačítky a aktivní položkou menu */
+  --wh-shadow-primary: 0 6px 16px -6px rgba(10, 124, 131, 0.55);
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -68,6 +82,13 @@
   --color-sky-ink: var(--wh-sky-ink);
   --color-orange-ink: var(--wh-orange-ink);
   --color-slate-ink: var(--wh-slate-ink);
+  --color-teal: var(--wh-teal);
+  --color-cyan: var(--wh-cyan);
+  --color-cyan-soft: var(--wh-cyan-soft);
+  --color-cyan-ink: var(--wh-cyan-ink);
+  --color-lime: var(--wh-lime);
+  --color-lime-soft: var(--wh-lime-soft);
+  --color-lime-ink: var(--wh-lime-ink);
 
   --radius-card: var(--wh-radius-card);
   --radius-dialog: var(--wh-radius-dialog);
@@ -77,6 +98,7 @@
   --shadow-card: var(--wh-shadow-card);
   --shadow-hover: var(--wh-shadow-hover);
   --shadow-pop: var(--wh-shadow-pop);
+  --shadow-primary: var(--wh-shadow-primary);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-manrope), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -251,7 +273,7 @@ h1, h2, h3, h4, .font-display {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(47, 104, 255, 0.12);
+  background: rgba(10, 124, 131, 0.12);
   pointer-events: none;
 }
 .tiptap-editor .ProseMirror td, .tiptap-editor .ProseMirror th { position: relative; }

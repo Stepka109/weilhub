@@ -13,7 +13,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     <div className="grid min-h-dvh lg:grid-cols-[1fr_minmax(480px,560px)]">
       {/* Ilustrační panel */}
       <div className="relative hidden overflow-hidden bg-light-blue/60 lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(47,104,255,0.14),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(18,163,155,0.16),transparent_55%)]" />
         <div className="relative flex h-full flex-col justify-between p-12">
           <Logo />
           <div className="max-w-md">
@@ -24,9 +24,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             <ul className="mt-10 grid grid-cols-2 gap-3">
               {[
                 { icon: BookOpen, label: "Studijní materiály", tone: "bg-card text-primary" },
-                { icon: ClipboardCheck, label: "Domácí úkoly", tone: "bg-mint text-mint-ink" },
-                { icon: CalendarDays, label: "Rozvrh hodin", tone: "bg-yellow text-yellow-ink" },
-                { icon: GraduationCap, label: "Testy a písemky", tone: "bg-lavender text-lavender-ink" },
+                { icon: ClipboardCheck, label: "Domácí úkoly", tone: "bg-lime-soft text-lime-ink" },
+                { icon: CalendarDays, label: "Rozvrh hodin", tone: "bg-cyan-soft text-cyan-ink" },
+                { icon: GraduationCap, label: "Testy a písemky", tone: "bg-rose text-rose-ink" },
               ].map((f) => (
                 <li key={f.label} className="flex items-center gap-3 rounded-2xl bg-card/80 p-3 shadow-card">
                   <span className={`grid size-10 place-items-center rounded-xl ${f.tone}`}>

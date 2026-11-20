@@ -10,7 +10,7 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
           <p style={{ color: "#5f6878" }}>Zkuste prosím stránku načíst znovu za chvíli.</p>
           <button
             onClick={reset}
-            style={{ marginTop: 16, background: "#2F68FF", color: "#fff", border: 0, borderRadius: 999, padding: "12px 24px", fontSize: 16, cursor: "pointer" }}
+            style={{ marginTop: 16, background: "#0A7C83", color: "#fff", border: 0, borderRadius: 999, padding: "12px 24px", fontSize: 16, cursor: "pointer" }}
           >
             Zkusit znovu
           </button>

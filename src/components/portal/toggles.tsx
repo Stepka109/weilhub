@@ -81,7 +81,7 @@ function CompletionCircle({ assignmentId, completed, title }: { assignmentId: st
       data-completing={moving ? "" : undefined}
       className={cn(
         "grid size-7 shrink-0 place-items-center rounded-full border-2 transition-all duration-150",
-        done ? "border-mint-ink bg-mint-ink text-white" : "border-[#c7d0de] bg-card text-transparent hover:border-primary hover:text-primary/40",
+        done ? "border-mint-ink bg-mint-ink text-white" : "border-[#c3d1d8] bg-card text-transparent hover:border-primary hover:text-primary/40",
       )}
     >
       <Check className="size-4" strokeWidth={3} aria-hidden />

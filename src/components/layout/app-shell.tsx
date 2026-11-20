@@ -80,7 +80,7 @@ function SidebarLink({ item, active, collapsed }: { item: NavItem; active: boole
       className={cn(
         "group flex h-11 items-center gap-3 rounded-nav px-3.5 text-[0.95rem] font-medium transition-colors duration-150",
         active
-          ? "bg-primary text-white shadow-[0_8px_18px_-8px_rgba(47,104,255,0.7)]"
+          ? "bg-primary text-white shadow-primary"
           : "text-slate-ink hover:bg-light-blue/60 hover:text-primary",
         collapsed && "justify-center px-0",
       )}

@@ -4,7 +4,7 @@ import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-xl bg-[#e9eef6]", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-xl bg-[#e6eef1]", className)} aria-hidden />;
 }
 
 export function EmptyState({

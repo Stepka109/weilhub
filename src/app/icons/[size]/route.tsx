@@ -29,20 +29,20 @@ export async function GET(_req: Request, ctx: RouteContext<"/icons/[size]">) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: maskable ? "#2F68FF" : "transparent",
+          background: maskable ? "#1B3A6B" : "transparent",
         }}
       >
         <svg width={inner} height={inner} viewBox="0 0 40 40">
-          {!maskable && <rect width="40" height="40" rx="12" fill="#2F68FF" />}
+          {!maskable && <rect width="40" height="40" rx="12" fill="#1B3A6B" />}
           <path
             d="M8 11.5c3.6-.6 6.9.4 9.6 2.6L20 16l2.4-1.9c2.7-2.2 6-3.2 9.6-2.6"
             fill="none"
-            stroke="#DCE9FF"
+            stroke="#8DC63F"
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <path d="M9 15.5l5 13.5 6-10.5 6 10.5 5-13.5" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M9 15.5l5 13.5 6-10.5 6 10.5 5-13.5" fill="none" stroke="#1FC2CA" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
     ),

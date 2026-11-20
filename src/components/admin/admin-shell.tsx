@@ -49,7 +49,7 @@ export function AdminShell({
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "group flex h-11 items-center gap-3 rounded-nav px-3.5 text-[0.95rem] font-medium transition-colors duration-150",
-                    active ? "bg-primary text-white shadow-[0_8px_18px_-8px_rgba(47,104,255,0.7)]" : "text-slate-ink hover:bg-light-blue/60 hover:text-primary",
+                    active ? "bg-primary text-white shadow-primary" : "text-slate-ink hover:bg-light-blue/60 hover:text-primary",
                   )}
                 >
                   <AnimatedIcon icon={item.icon} animation={item.anim} className="size-5" />
