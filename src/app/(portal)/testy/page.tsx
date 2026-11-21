@@ -86,7 +86,7 @@ export default async function ExamsPage({ searchParams }: PageProps<"/testy">) {
                             <Link
                               key={material!.id}
                               href={`/materialy/${material!.id}`}
-                              className="inline-flex items-center gap-1.5 rounded-full bg-light-blue px-3 py-1.5 text-sm font-medium text-primary hover:bg-[#cfe0ff]"
+                              className="inline-flex items-center gap-1.5 rounded-full bg-light-blue px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary-soft-hover"
                             >
                               <BookOpen className="size-3.5" aria-hidden />
                               {material!.title}

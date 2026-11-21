@@ -16,7 +16,7 @@ export const badgeVariants = cva(
         orange: "bg-orange text-orange-ink",
         slate: "bg-slate-soft text-slate-ink",
         outline: "border border-line bg-card text-muted",
-        solid: "bg-primary text-white",
+        solid: "bg-primary text-on-primary",
       },
     },
     defaultVariants: { tone: "slate" },

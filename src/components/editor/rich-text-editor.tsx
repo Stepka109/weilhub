@@ -349,7 +349,7 @@ export function RichTextEditor({
               const n = convertTextFormulas(editor);
               if (n) toast.success(n === 1 ? "Vzorec byl převeden." : `Převedeno vzorců: ${n}.`);
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-on-primary hover:bg-primary-hover"
           >
             Převést
           </button>

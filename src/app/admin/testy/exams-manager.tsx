@@ -155,7 +155,7 @@ export function ExamsManager({
               type="button"
               aria-pressed={showPast === past}
               onClick={() => setShowPast(past)}
-              className={`h-9 rounded-full px-4 text-sm font-medium ${showPast === past ? "bg-primary text-white" : "text-muted hover:bg-slate-soft"}`}
+              className={`h-9 rounded-full px-4 text-sm font-medium ${showPast === past ? "bg-primary text-on-primary" : "text-muted hover:bg-slate-soft"}`}
             >
               {past ? "Proběhlé" : "Nadcházející"}
             </button>

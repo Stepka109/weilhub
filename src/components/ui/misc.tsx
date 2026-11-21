@@ -4,7 +4,7 @@ import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-xl bg-[#e6eef1]", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-xl bg-skeleton", className)} aria-hidden />;
 }
 
 export function EmptyState({
@@ -107,7 +107,7 @@ export function PillTabs({
               aria-current={it.active ? "page" : undefined}
               className={cn(
                 "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap transition-colors duration-150",
-                it.active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-slate-soft hover:text-ink",
+                it.active ? "bg-primary text-on-primary shadow-sm" : "text-muted hover:bg-slate-soft hover:text-ink",
               )}
             >
               {it.label}
@@ -115,7 +115,7 @@ export function PillTabs({
                 <span
                   className={cn(
                     "rounded-full px-1.5 text-xs",
-                    it.active ? "bg-white/20 text-white" : "bg-slate-soft text-slate-ink",
+                    it.active ? "bg-on-primary/20 text-on-primary" : "bg-slate-soft text-slate-ink",
                   )}
                 >
                   {it.count}

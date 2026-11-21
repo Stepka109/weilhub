@@ -171,7 +171,7 @@ function CellDialog({
                   onClick={() => onGroup(g.key)}
                   className={cn(
                     "flex items-center gap-2 rounded-2xl border-2 px-3 py-2.5 text-left transition-colors",
-                    group === g.key ? "border-primary bg-light-blue/40" : "border-line hover:border-[#cfd7e4]",
+                    group === g.key ? "border-primary bg-light-blue/40" : "border-line hover:border-line-strong",
                   )}
                 >
                   {g.key === "all" ? (
@@ -208,7 +208,7 @@ function CellDialog({
                 onClick={() => setMode(m.key)}
                 className={cn(
                   "flex flex-col items-start gap-1 rounded-2xl border-2 p-3 text-left transition-colors",
-                  mode === m.key ? cn(m.tone, "bg-light-blue/40") : "border-line hover:border-[#cfd7e4]",
+                  mode === m.key ? cn(m.tone, "bg-light-blue/40") : "border-line hover:border-line-strong",
                 )}
               >
                 <m.icon className={cn("size-[18px]", mode === m.key ? "text-primary" : "text-muted")} aria-hidden />
@@ -307,7 +307,7 @@ function CellDialog({
                       onClick={() => setAccent(o.key)}
                       className={cn(
                         "flex items-center gap-3 rounded-2xl border-2 p-3 text-left transition-colors",
-                        accent === o.key ? "border-primary bg-light-blue/40" : "border-line hover:border-[#cfd7e4]",
+                        accent === o.key ? "border-primary bg-light-blue/40" : "border-line hover:border-line-strong",
                       )}
                     >
                       <span

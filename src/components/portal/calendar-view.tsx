@@ -74,7 +74,7 @@ export function CalendarView({
                   <span
                     className={cn(
                       "mb-1 grid size-7 place-items-center rounded-full text-xs font-semibold",
-                      d === today ? "bg-primary text-white" : inMonth ? "text-ink" : "text-muted/60",
+                      d === today ? "bg-primary text-on-primary" : inMonth ? "text-ink" : "text-muted/60",
                     )}
                   >
                     {Number(d.slice(8))}

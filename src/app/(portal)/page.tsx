@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
 export const metadata = { title: "Domů" };
 
 const QUICK = [
-  { href: "/testy", title: "Testy", text: "Kdy se píše a z čeho", icon: FileCheck, tone: "bg-rose text-rose-ink", card: "bg-[#fff1f3]", anim: "wiggle" as const },
-  { href: "/ukoly", title: "Úkoly", text: "Co je potřeba odevzdat", icon: ClipboardCheck, tone: "bg-lime-soft text-lime-ink", card: "bg-[#f4faea]", anim: "pop" as const },
-  { href: "/rozvrh", title: "Rozvrh", text: "Hodiny a změny tento týden", icon: CalendarDays, tone: "bg-cyan-soft text-cyan-ink", card: "bg-[#ebf9fa]", anim: "bounce" as const },
-  { href: "/materialy", title: "Materiály", text: "Zápisy, prezentace a dokumenty", icon: FolderOpen, tone: "bg-light-blue text-primary", card: "bg-[#eaf7f6]", anim: "bounce" as const },
+  { href: "/testy", title: "Testy", text: "Kdy se píše a z čeho", icon: FileCheck, tone: "bg-rose text-rose-ink", card: "bg-rose/50", anim: "wiggle" as const },
+  { href: "/ukoly", title: "Úkoly", text: "Co je potřeba odevzdat", icon: ClipboardCheck, tone: "bg-lime-soft text-lime-ink", card: "bg-lime-soft/60", anim: "pop" as const },
+  { href: "/rozvrh", title: "Rozvrh", text: "Hodiny a změny tento týden", icon: CalendarDays, tone: "bg-cyan-soft text-cyan-ink", card: "bg-cyan-soft/60", anim: "bounce" as const },
+  { href: "/materialy", title: "Materiály", text: "Zápisy, prezentace a dokumenty", icon: FolderOpen, tone: "bg-light-blue text-primary", card: "bg-light-blue/60", anim: "bounce" as const },
 ];
 
 export default async function DashboardPage() {

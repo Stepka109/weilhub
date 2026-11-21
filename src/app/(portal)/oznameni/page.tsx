@@ -36,7 +36,7 @@ export default async function AnnouncementsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {isUnread && (
                       <Badge tone="solid">
-                        <span className="size-1.5 rounded-full bg-white" aria-hidden /> Nové
+                        <span className="size-1.5 rounded-full bg-on-primary" aria-hidden /> Nové
                       </Badge>
                     )}
                     {a.priority === "important" && <Badge tone="red">Důležité</Badge>}

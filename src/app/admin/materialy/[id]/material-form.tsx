@@ -270,7 +270,7 @@ export function MaterialForm({
                           onClick={() => field.onChange(o.v)}
                           className={cn(
                             "flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-colors",
-                            field.value === o.v ? "border-primary bg-light-blue/40" : "border-line hover:border-[#cfd7e4]",
+                            field.value === o.v ? "border-primary bg-light-blue/40" : "border-line hover:border-line-strong",
                           )}
                         >
                           <o.icon className={cn("mt-0.5 size-5", field.value === o.v ? "text-primary" : "text-muted")} aria-hidden />

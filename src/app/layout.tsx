@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { Toaster } from "sonner";
 import { ServiceWorkerRegistration } from "@/components/layout/sw-register";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import "./timetable.css";
@@ -32,7 +33,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1B3A6B",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1B3A6B" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D1626" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -40,7 +44,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="cs" className={`${inter.variable} ${manrope.variable} antialiased`}>
+    // data-theme nastavuje skript níže ještě před hydratací (uložená volba vzhledu)
+    <html lang="cs" className={`${inter.variable} ${manrope.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh">
         {children}
         <Toaster

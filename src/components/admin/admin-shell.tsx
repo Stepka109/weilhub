@@ -10,6 +10,7 @@ import { UserAvatar } from "@/components/layout/user-avatar";
 import { ADMIN_NAV, isActive } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 import type { AppRole } from "@/lib/types";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function AdminShell({
   user,
@@ -36,7 +37,7 @@ export function AdminShell({
         <Link href="/admin" className="flex items-center gap-2 rounded-xl" aria-label="Administrace – přehled">
           <Logo />
         </Link>
-        <span className="rounded-full bg-navy px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white uppercase">Admin</span>
+        <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold tracking-wide text-card uppercase">Admin</span>
       </div>
       <nav aria-label="Navigace administrace" className="scrollbar-none flex-1 overflow-y-auto px-3 pb-3">
         <ul className="space-y-1">
@@ -49,7 +50,7 @@ export function AdminShell({
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "group flex h-11 items-center gap-3 rounded-nav px-3.5 text-[0.95rem] font-medium transition-colors duration-150",
-                    active ? "bg-primary text-white shadow-primary" : "text-slate-ink hover:bg-light-blue/60 hover:text-primary",
+                    active ? "bg-primary text-on-primary shadow-primary" : "text-slate-ink hover:bg-light-blue/60 hover:text-primary",
                   )}
                 >
                   <AnimatedIcon icon={item.icon} animation={item.anim} className="size-5" />
@@ -63,17 +64,18 @@ export function AdminShell({
       <div className="space-y-2 border-t border-line/80 p-3">
         <Link
           href="/"
-          className="group flex h-11 items-center gap-3 rounded-full bg-light-blue px-4 text-[0.95rem] font-medium text-primary transition-colors hover:bg-[#cfe0ff]"
+          className="group flex h-11 items-center gap-3 rounded-full bg-light-blue px-4 text-[0.95rem] font-medium text-primary transition-colors hover:bg-primary-soft-hover"
         >
           <AnimatedIcon icon={ArrowLeft} animation="nudge" className="size-5" />
           Zpět na portál
         </Link>
         <div className="flex items-center gap-3 rounded-2xl px-2 py-2">
           <UserAvatar name={user.name} path={user.avatarPath} className="size-9" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
             <p className="text-xs text-muted">{user.role === "admin" ? "Administrátor" : "Editor"}</p>
           </div>
+          <ThemeToggle className="size-10 shrink-0" />
         </div>
       </div>
     </>
@@ -81,7 +83,7 @@ export function AdminShell({
 
   return (
     <div className="min-h-dvh">
-      <a href="#obsah" className="sr-only z-[60] rounded-full bg-primary px-4 py-2 text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+      <a href="#obsah" className="sr-only z-[60] rounded-full bg-primary px-4 py-2 text-on-primary focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         Přeskočit na obsah
       </a>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[264px] flex-col border-r border-line/80 bg-card lg:flex">{nav}</aside>

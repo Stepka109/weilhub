@@ -43,7 +43,7 @@ export function AssignmentsTable({ assignments }: { assignments: Row[] }) {
               type="button"
               onClick={() => setTab(k)}
               aria-pressed={tab === k}
-              className={`h-9 rounded-full px-4 text-sm font-medium transition-colors ${tab === k ? "bg-primary text-white" : "text-muted hover:bg-slate-soft"}`}
+              className={`h-9 rounded-full px-4 text-sm font-medium transition-colors ${tab === k ? "bg-primary text-on-primary" : "text-muted hover:bg-slate-soft"}`}
             >
               {label}
             </button>

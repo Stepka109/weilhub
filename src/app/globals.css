@@ -16,6 +16,16 @@
   --wh-text: #162b4f;
   --wh-muted: #5b6676; /* Slate ztmavená kvůli kontrastu WCAG AA na pozadí */
   --wh-border: #e0e8ec;
+  --wh-border-strong: #cad7de;
+  /* Text na hlavní (tyrkysové) ploše – v tmavém režimu tmavý */
+  --wh-on-primary: #ffffff;
+  --wh-placeholder: #8693a3;
+  --wh-primary-soft-hover: #c6ebe9;
+  --wh-skeleton: #e6eef1;
+  --wh-switch-off: #d2dde2;
+  --wh-danger-hover: #9b1c37;
+  --wh-danger-soft-hover: #ffd5dc;
+  --wh-mint-hover: #bdf0dc;
 
   /* Další barvy loga Weilovky */
   --wh-teal: #12a39b;
@@ -56,6 +66,110 @@
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+/* Tmavý vzhled: zvolený ručně (data-theme="dark"), nebo podle zařízení,
+   pokud uživatel nezvolil světlý. */
+:root[data-theme="dark"] {
+  --wh-blue: #3cc4ca;
+  --wh-blue-hover: #63d2d7;
+  --wh-on-primary: #052a2e;
+  --wh-navy: #dfe8f3;
+  --wh-light-blue: #123a41;
+  --wh-bg: #0d1626;
+  --wh-card: #152238;
+  --wh-text: #e5ecf5;
+  --wh-muted: #9aa8ba;
+  --wh-border: #25364f;
+  --wh-border-strong: #34496a;
+  --wh-placeholder: #7f8ea3;
+  --wh-primary-soft-hover: #18505a;
+  --wh-skeleton: #1f2f48;
+  --wh-switch-off: #34496a;
+  --wh-danger-hover: #ff8ea3;
+  --wh-danger-soft-hover: #552232;
+  --wh-mint-hover: #1a5240;
+
+  --wh-teal: #2fc0b7;
+  --wh-cyan: #45d3da;
+  --wh-cyan-soft: #10393f;
+  --wh-cyan-ink: #8fe6ec;
+  --wh-lime: #9dd352;
+  --wh-lime-soft: #26371a;
+  --wh-lime-ink: #bde681;
+
+  --wh-mint: #123b30;
+  --wh-yellow: #3a3116;
+  --wh-lavender: #2c2448;
+  --wh-red: #401b26;
+  --wh-sky: #10324a;
+  --wh-orange: #3f2816;
+  --wh-slate: #1c2b42;
+  --wh-mint-ink: #86e3bf;
+  --wh-yellow-ink: #f1d073;
+  --wh-lavender-ink: #c8b6ff;
+  --wh-red-ink: #ff9fb2;
+  --wh-sky-ink: #93d5ff;
+  --wh-orange-ink: #ffb784;
+  --wh-slate-ink: #c3cedc;
+
+  --wh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --wh-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 32px -14px rgba(0, 0, 0, 0.6);
+  --wh-shadow-pop: 0 12px 40px -8px rgba(0, 0, 0, 0.65);
+  --wh-shadow-primary: 0 6px 16px -6px rgba(60, 196, 202, 0.35);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wh-blue: #3cc4ca;
+    --wh-blue-hover: #63d2d7;
+    --wh-on-primary: #052a2e;
+    --wh-navy: #dfe8f3;
+    --wh-light-blue: #123a41;
+    --wh-bg: #0d1626;
+    --wh-card: #152238;
+    --wh-text: #e5ecf5;
+    --wh-muted: #9aa8ba;
+    --wh-border: #25364f;
+    --wh-border-strong: #34496a;
+    --wh-placeholder: #7f8ea3;
+    --wh-primary-soft-hover: #18505a;
+    --wh-skeleton: #1f2f48;
+    --wh-switch-off: #34496a;
+    --wh-danger-hover: #ff8ea3;
+    --wh-danger-soft-hover: #552232;
+    --wh-mint-hover: #1a5240;
+
+    --wh-teal: #2fc0b7;
+    --wh-cyan: #45d3da;
+    --wh-cyan-soft: #10393f;
+    --wh-cyan-ink: #8fe6ec;
+    --wh-lime: #9dd352;
+    --wh-lime-soft: #26371a;
+    --wh-lime-ink: #bde681;
+
+    --wh-mint: #123b30;
+    --wh-yellow: #3a3116;
+    --wh-lavender: #2c2448;
+    --wh-red: #401b26;
+    --wh-sky: #10324a;
+    --wh-orange: #3f2816;
+    --wh-slate: #1c2b42;
+    --wh-mint-ink: #86e3bf;
+    --wh-yellow-ink: #f1d073;
+    --wh-lavender-ink: #c8b6ff;
+    --wh-red-ink: #ff9fb2;
+    --wh-sky-ink: #93d5ff;
+    --wh-orange-ink: #ffb784;
+    --wh-slate-ink: #c3cedc;
+
+    --wh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    --wh-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 32px -14px rgba(0, 0, 0, 0.6);
+    --wh-shadow-pop: 0 12px 40px -8px rgba(0, 0, 0, 0.65);
+    --wh-shadow-primary: 0 6px 16px -6px rgba(60, 196, 202, 0.35);
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
@@ -82,6 +196,15 @@
   --color-sky-ink: var(--wh-sky-ink);
   --color-orange-ink: var(--wh-orange-ink);
   --color-slate-ink: var(--wh-slate-ink);
+  --color-on-primary: var(--wh-on-primary);
+  --color-line-strong: var(--wh-border-strong);
+  --color-placeholder: var(--wh-placeholder);
+  --color-primary-soft-hover: var(--wh-primary-soft-hover);
+  --color-skeleton: var(--wh-skeleton);
+  --color-switch-off: var(--wh-switch-off);
+  --color-danger-hover: var(--wh-danger-hover);
+  --color-danger-soft-hover: var(--wh-danger-soft-hover);
+  --color-mint-hover: var(--wh-mint-hover);
   --color-teal: var(--wh-teal);
   --color-cyan: var(--wh-cyan);
   --color-cyan-soft: var(--wh-cyan-soft);
@@ -239,7 +362,7 @@ h1, h2, h3, h4, .font-display {
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 .prose-wh pre {
-  background: var(--wh-navy);
+  background: #0f1d33;
   color: #e8eefc;
   border-radius: 14px;
   padding: 1em 1.2em;
@@ -288,6 +411,13 @@ h1, h2, h3, h4, .font-display {
    Na obrazovce list A4, v tisku jen obsah bez lišty a stínů.
    ========================================================================== */
 .wh-print { min-height: 100dvh; background: var(--wh-bg); padding-bottom: 32px; }
+/* List A4 je vždy světlý (i v tmavém vzhledu) */
+.wh-print-page {
+  color-scheme: light;
+  --wh-text: #162b4f; --wh-muted: #5b6676; --wh-border: #e0e8ec; --wh-card: #ffffff; --wh-bg: #f4f7f8;
+  --wh-blue: #0a7c83; --wh-light-blue: #dbf2f1; --wh-slate: #edf2f4; --wh-yellow: #ffe8a3;
+  color: var(--wh-text);
+}
 .wh-print-toolbar {
   position: sticky; top: 0; z-index: 10;
   border-bottom: 1px solid var(--wh-border); background: color-mix(in srgb, var(--wh-card) 92%, transparent);

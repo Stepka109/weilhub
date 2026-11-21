@@ -89,7 +89,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Hledat materiály, zápisy, úkoly, testy…"
-              className="h-16 w-full bg-transparent text-base text-ink outline-none placeholder:text-[#8693a3] focus-visible:outline-none"
+              className="h-16 w-full bg-transparent text-base text-ink outline-none placeholder:text-placeholder focus-visible:outline-none"
               aria-label="Hledaný výraz"
               aria-controls="vysledky-hledani"
               maxLength={100}

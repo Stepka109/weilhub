@@ -45,7 +45,7 @@ export function MaterialPicker({
               <button
                 type="button"
                 onClick={() => onChange(value.filter((v) => v !== o.id))}
-                className="grid size-6 place-items-center rounded-full hover:bg-white/60"
+                className="grid size-6 place-items-center rounded-full hover:bg-card/60"
                 aria-label={`Odebrat ${o.title}`}
               >
                 <X className="size-3.5" />

@@ -30,6 +30,7 @@ import { MOBILE_PRIMARY, PORTAL_NAV, isActive, type NavItem } from "./nav-items"
 import { signOut } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 import type { AppRole } from "@/lib/types";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export interface ShellUser {
   name: string;
@@ -80,7 +81,7 @@ function SidebarLink({ item, active, collapsed }: { item: NavItem; active: boole
       className={cn(
         "group flex h-11 items-center gap-3 rounded-nav px-3.5 text-[0.95rem] font-medium transition-colors duration-150",
         active
-          ? "bg-primary text-white shadow-primary"
+          ? "bg-primary text-on-primary shadow-primary"
           : "text-slate-ink hover:bg-light-blue/60 hover:text-primary",
         collapsed && "justify-center px-0",
       )}
@@ -159,7 +160,7 @@ export function AppShell({
     <div className="min-h-dvh">
       <a
         href="#obsah"
-        className="sr-only z-[60] rounded-full bg-primary px-4 py-2 text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        className="sr-only z-[60] rounded-full bg-primary px-4 py-2 text-on-primary focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
         Přeskočit na obsah
       </a>
@@ -213,7 +214,7 @@ export function AppShell({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="group ml-auto flex h-11 items-center gap-3 rounded-full border border-line bg-card px-4 text-left text-sm text-muted shadow-card transition-colors hover:border-[#cfd7e4] lg:ml-0 lg:w-full lg:max-w-md"
+              className="group ml-auto flex h-11 items-center gap-3 rounded-full border border-line bg-card px-4 text-left text-sm text-muted shadow-card transition-colors hover:border-line-strong lg:ml-0 lg:w-full lg:max-w-md"
               aria-label="Hledat (Ctrl+K)"
             >
               <AnimatedIcon icon={Search} animation="wiggle" className="size-[18px] text-muted" />
@@ -224,6 +225,7 @@ export function AppShell({
             </button>
 
             <div className="flex items-center gap-1.5 lg:ml-auto">
+              <ThemeToggle />
               <Link
                 href="/oznameni"
                 className="group relative grid size-11 place-items-center rounded-full border border-line bg-card text-slate-ink shadow-card transition-colors hover:text-primary"
@@ -231,7 +233,7 @@ export function AppShell({
               >
                 <AnimatedIcon icon={Bell} animation="bell" className="size-5" />
                 {unread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] leading-5 font-semibold text-white ring-2 ring-bg">
+                  <span className="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] leading-5 font-semibold text-on-primary ring-2 ring-bg">
                     {unread > 9 ? "9+" : unread}
                   </span>
                 )}
@@ -303,7 +305,7 @@ export function AppShell({
                   <span
                     className={cn(
                       "grid h-8 w-14 place-items-center rounded-full transition-colors",
-                      active ? "bg-primary text-white" : "text-slate-ink",
+                      active ? "bg-primary text-on-primary" : "text-slate-ink",
                     )}
                   >
                     <AnimatedIcon icon={item.icon} animation={item.anim} className="size-5" />

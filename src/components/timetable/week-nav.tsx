@@ -80,7 +80,7 @@ export function GroupSwitch({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex h-10 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold whitespace-nowrap transition-colors duration-150",
-                  active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-slate-soft hover:text-ink",
+                  active ? "bg-primary text-on-primary shadow-sm" : "text-muted hover:bg-slate-soft hover:text-ink",
                 )}
               >
                 {o.view !== "both" && (
@@ -88,7 +88,7 @@ export function GroupSwitch({
                 )}
                 <span className="sm:hidden">{o.short}</span>
                 <span className="max-sm:hidden">{o.label}</span>
-                {myGroup === o.view && <span className={cn("text-[11px] font-medium", active ? "text-white/80" : "text-muted")}>(moje)</span>}
+                {myGroup === o.view && <span className={cn("text-[11px] font-medium", active ? "text-on-primary/80" : "text-muted")}>(moje)</span>}
               </Link>
             </li>
           );
