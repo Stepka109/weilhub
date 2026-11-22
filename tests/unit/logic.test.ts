@@ -284,3 +284,15 @@ describe("pomocné funkce", () => {
     expect(makeSnippet("Převody mezi číselnými soustavami", "ciselnymi", 5)).toContain("číselnými");
   });
 });
+
+describe("události a termíny v oznámeních", () => {
+  it("validace: událost potřebuje datum, u oznámení se datum smaže", async () => {
+    const { announcementSchema } = await import("@/lib/validation/admin");
+    const base = { title: "Hospitace", body: "", priority: "normal" as const, pinned: false, status: "published" as const };
+    expect(announcementSchema.safeParse({ ...base, kind: "event", event_date: "" }).success).toBe(false);
+    const info = announcementSchema.parse({ ...base, kind: "info", event_date: "2026-11-27", event_time: "10:00" });
+    expect([info.event_date, info.event_time]).toEqual([null, null]);
+    const deadline = announcementSchema.parse({ ...base, kind: "deadline", event_date: "2026-11-30", event_time: "" });
+    expect([deadline.kind, deadline.event_date, deadline.event_time]).toEqual(["deadline", "2026-11-30", null]);
+  });
+});

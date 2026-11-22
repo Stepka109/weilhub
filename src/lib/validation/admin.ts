@@ -114,13 +114,24 @@ export const eventSchema = z
   })
   .refine((v) => v.end_date >= v.start_date, { message: "Konec nemůže být před začátkem.", path: ["end_date"] });
 
-export const announcementSchema = z.object({
-  title: z.string().trim().min(1, "Zadejte nadpis.").max(200),
-  body: z.string().trim().max(10000),
-  priority: z.enum(["normal", "important"]),
-  pinned: z.boolean(),
-  status: publicationStatus,
-});
+export const announcementSchema = z
+  .object({
+    title: z.string().trim().min(1, "Zadejte nadpis.").max(200),
+    body: z.string().trim().max(10000),
+    kind: z.enum(["info", "event", "deadline"]).default("info"),
+    event_date: optionalDate,
+    event_time: optionalTime,
+    priority: z.enum(["normal", "important"]),
+    pinned: z.boolean(),
+    status: publicationStatus,
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind !== "info" && !v.event_date) {
+      ctx.addIssue({ code: "custom", message: v.kind === "event" ? "Zadejte, kdy se událost koná." : "Zadejte, do kdy je to potřeba.", path: ["event_date"] });
+    }
+  })
+  // Běžné oznámení datum nemá
+  .transform((v) => (v.kind === "info" ? { ...v, event_date: null, event_time: null } : v));
 
 export const linkSchema = z.object({
   title: z.string().trim().min(1, "Zadejte název.").max(120),

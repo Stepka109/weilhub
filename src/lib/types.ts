@@ -163,10 +163,16 @@ export interface SchoolEvent {
   status: PublicationStatus;
 }
 
+/** info = oznámení, event = událost (co se kdy děje), deadline = termín (co je potřeba do kdy) */
+export type AnnouncementKind = "info" | "event" | "deadline";
+
 export interface Announcement {
   id: string;
   title: string;
   body: string;
+  kind: AnnouncementKind;
+  event_date: string | null;
+  event_time: string | null;
   priority: AnnouncementPriority;
   pinned: boolean;
   status: PublicationStatus;

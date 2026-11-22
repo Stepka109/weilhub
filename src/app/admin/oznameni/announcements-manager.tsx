@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Megaphone, Pin, PinOff, Plus } from "lucide-react";
+import { CalendarClock, CalendarHeart, Megaphone, Pin, PinOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,22 @@ import { RowMenu, StatusSelect } from "@/components/admin/row-menu";
 import { deleteRow, saveAnnouncement, setPinned, setStatus } from "@/lib/actions/admin/content";
 import { useAction } from "@/lib/use-action";
 import { formatDateTime } from "@/lib/dates";
-import type { Announcement, AnnouncementPriority, PublicationStatus } from "@/lib/types";
+import { NOTICE_KIND, noticeWhen } from "@/components/portal/notice-meta";
+import { cn } from "@/lib/utils";
+import type { Announcement, AnnouncementKind, AnnouncementPriority, PublicationStatus } from "@/lib/types";
+
+const KINDS: { key: AnnouncementKind; label: string; hint: string; icon: typeof Megaphone }[] = [
+  { key: "info", label: "Oznámení", hint: "Běžná informace", icon: Megaphone },
+  { key: "event", label: "Událost", hint: "Co se kdy bude dít", icon: CalendarHeart },
+  { key: "deadline", label: "Termín", hint: "Co je potřeba do kdy", icon: CalendarClock },
+];
 
 interface Values {
   title: string;
   body: string;
+  kind: AnnouncementKind;
+  event_date: string;
+  event_time: string;
   priority: AnnouncementPriority;
   pinned: boolean;
   status: PublicationStatus;
@@ -29,15 +40,19 @@ interface Values {
 
 function AnnouncementDialog({ item, open, onOpenChange }: { item: Announcement | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const { pending, run } = useAction();
-  const { register, handleSubmit, control, formState, setError } = useForm<Values>({
+  const { register, handleSubmit, control, formState, setError, watch } = useForm<Values>({
     values: {
       title: item?.title ?? "",
       body: item?.body ?? "",
+      kind: item?.kind ?? "info",
+      event_date: item?.event_date ?? "",
+      event_time: item?.event_time?.slice(0, 5) ?? "",
       priority: item?.priority ?? "normal",
       pinned: item?.pinned ?? false,
       status: item?.status ?? "published",
     },
   });
+  const kind = watch("kind");
   const onSubmit = handleSubmit(async (v) => {
     const res = await run(() => saveAnnouncement(item?.id ?? null, v), { onSuccess: () => onOpenChange(false) });
     if (!res.ok) for (const [k, m] of Object.entries(res.fieldErrors ?? {})) if (m?.[0]) setError(k as keyof Values, { message: m[0] });
@@ -47,10 +62,51 @@ function AnnouncementDialog({ item, open, onOpenChange }: { item: Announcement |
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title={item ? "Upravit oznámení" : "Nové oznámení"}>
         <form onSubmit={onSubmit} className="space-y-5" noValidate>
+          <Controller
+            control={control}
+            name="kind"
+            render={({ field }) => (
+              <div role="radiogroup" aria-label="Typ oznámení" className="grid grid-cols-3 gap-2">
+                {KINDS.map((k) => (
+                  <button
+                    key={k.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={field.value === k.key}
+                    onClick={() => field.onChange(k.key)}
+                    className={cn(
+                      "flex flex-col items-start gap-1 rounded-2xl border-2 p-3 text-left transition-colors",
+                      field.value === k.key ? "border-primary bg-light-blue/40" : "border-line hover:border-line-strong",
+                    )}
+                  >
+                    <k.icon className={cn("size-[18px]", field.value === k.key ? "text-primary" : "text-muted")} aria-hidden />
+                    <span className="text-sm font-semibold text-ink">{k.label}</span>
+                    <span className="text-xs text-muted max-sm:hidden">{k.hint}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          />
           <Field label="Nadpis" htmlFor="an-title" required error={formState.errors.title?.message}>
             <Input id="an-title" {...register("title", { required: "Zadejte nadpis." })} />
           </Field>
-          <Field label="Text" htmlFor="an-body">
+          {kind !== "info" && (
+            <div className="grid grid-cols-[1fr_130px] gap-3">
+              <Field
+                label={kind === "event" ? "Kdy" : "Do kdy"}
+                htmlFor="an-date"
+                required
+                error={formState.errors.event_date?.message}
+                hint={kind === "event" ? "Např. den hospitace." : "Např. do kdy se domluvit."}
+              >
+                <Input id="an-date" type="date" {...register("event_date")} />
+              </Field>
+              <Field label="Čas" htmlFor="an-time" hint="Nepovinné">
+                <Input id="an-time" type="time" {...register("event_time")} />
+              </Field>
+            </div>
+          )}
+          <Field label="Text" htmlFor="an-body" hint={kind === "deadline" ? "Co je potřeba udělat nebo rozhodnout." : undefined}>
             <Textarea id="an-body" rows={5} {...register("body")} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -102,7 +158,7 @@ export function AnnouncementsManager({ items, openNew }: { items: Announcement[]
     <>
       <div className="mb-4 flex justify-end">
         <Button onClick={() => setDialog({ open: true, item: null })}>
-          <Plus /> Nové oznámení
+          <Plus /> Nové oznámení nebo událost
         </Button>
       </div>
       {items.length === 0 ? (
@@ -117,6 +173,11 @@ export function AnnouncementsManager({ items, openNew }: { items: Announcement[]
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={a.status} />
+                    {a.kind !== "info" && (
+                      <Badge className={NOTICE_KIND[a.kind].badge}>
+                        {a.kind === "event" ? <CalendarHeart aria-hidden /> : <CalendarClock aria-hidden />} {NOTICE_KIND[a.kind].label} · {noticeWhen(a)}
+                      </Badge>
+                    )}
                     {a.priority === "important" && <Badge tone="red">Důležité</Badge>}
                     {a.pinned && (
                       <Badge tone="blue">

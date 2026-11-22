@@ -17,9 +17,10 @@ import { DueBadge, MaterialRow, SubjectBadge, SubjectIcon } from "@/components/p
 import { CompletionToggle } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
 import { GroupBadge } from "@/components/portal/group-badge";
-import { getAnnouncements, getAssignments, getExams, getMaterials, getSettings } from "@/lib/data/portal";
+import { getAnnouncements, getUpcomingEvents, getAssignments, getExams, getMaterials, getSettings } from "@/lib/data/portal";
 import { dueInfo, formatDate, formatDue, formatTime, greetingDate, shiftDate, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
+import { NOTICE_KIND, NoticeDateTile, noticeRelative, noticeWhen } from "@/components/portal/notice-meta";
 
 export const metadata = { title: "Domů" };
 
@@ -34,14 +35,17 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const today = todayIso();
   const group = user.profile.preferences?.studyGroup ?? null;
-  const [assignments, exams, materials, announcements, settings] = await Promise.all([
+  const [assignments, exams, materials, announcements, settings, upcoming] = await Promise.all([
     // Nesplněné úkoly včetně těch po termínu (za poslední 2 týdny)
     getAssignments(user.id, { from: shiftDate(today, -14), onlyOpen: true, limit: 6, group }),
     getExams({ upcoming: true, limit: 5, group }),
     getMaterials({ limit: 6, group }),
     getAnnouncements({ limit: 4 }),
     getSettings(),
+    // Události a termíny z oznámení na nejbližší dva týdny
+    getUpcomingEvents({ days: 14, limit: 3 }),
   ]);
+  const upcomingIds = new Set(upcoming.map((a) => a.id));
   const pinned = announcements.filter((a) => a.pinned);
   const firstName = user.profile.display_name.split(" ")[0];
   const nextExam = exams[0];
@@ -272,10 +276,25 @@ export default async function DashboardPage() {
             }
           />
           <div className="space-y-1 px-3 pt-3 pb-4 sm:px-4">
-            {announcements.length === 0 ? (
+            {upcoming.map((a) => {
+              const rel = noticeRelative(a);
+              return (
+                <Link key={a.id} href="/oznameni" className="flex items-center gap-3 rounded-2xl px-2 py-3 hover:bg-bg sm:px-3">
+                  <NoticeDateTile notice={a} className="w-12 rounded-xl py-1.5 [&>span:nth-child(2)]:text-xl" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-ink">{a.title}</span>
+                    <span className="mt-0.5 block truncate text-sm text-muted">
+                      {NOTICE_KIND[a.kind as "event" | "deadline"].label} · {noticeWhen(a)}
+                    </span>
+                  </span>
+                  {rel.soon && <Badge tone="orange">{rel.label}</Badge>}
+                </Link>
+              );
+            })}
+            {announcements.length === 0 && upcoming.length === 0 ? (
               <EmptyState icon={Megaphone} title="Žádná oznámení" />
             ) : (
-              announcements.map((a) => (
+              announcements.filter((a) => !upcomingIds.has(a.id)).map((a) => (
                 <Link key={a.id} href="/oznameni" className="flex gap-3 rounded-2xl px-2 py-3 hover:bg-bg sm:px-3">
                   <SubjectIcon subject={{ color: a.priority === "important" ? "red" : "blue", icon: "mail" }} size="sm" />
                   <span className="min-w-0">

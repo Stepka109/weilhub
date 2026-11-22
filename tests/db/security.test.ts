@@ -362,3 +362,24 @@ describe("widget rozvrhu", () => {
     expect(await call(HASH_P)).toBeNull();
   });
 });
+
+describe("události a termíny v oznámeních", () => {
+  it("událost a termín musí mít datum, běžné oznámení ne", async () => {
+    await asUser(db, editorId);
+    await db.query(
+      "insert into public.announcements (title, kind, event_date, event_time, status) values ('Hospitace', 'event', '2026-11-27', '10:00', 'published')",
+    );
+    await db.query("insert into public.announcements (title, status) values ('Info', 'published')");
+    await expect(
+      db.query("insert into public.announcements (title, kind, status) values ('Bez data', 'deadline', 'published')"),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      db.query("insert into public.announcements (title, kind, event_date) values ('Špatný typ', 'party', '2026-11-27')"),
+    ).rejects.toThrow(/check constraint/);
+    await asUser(db, studentId);
+    await expect(
+      db.query("insert into public.announcements (title, kind, event_date) values ('Student', 'event', '2026-11-27')"),
+    ).rejects.toThrow(/row-level security/);
+    expect(await count("select 1 from public.announcements where kind = 'event' and status = 'published'")).toBeGreaterThanOrEqual(1);
+  });
+});

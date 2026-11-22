@@ -1,4 +1,4 @@
-import { CalendarOff, ClipboardCheck, FileCheck, PartyPopper, Sparkles } from "lucide-react";
+import { CalendarClock, CalendarHeart, CalendarOff, ClipboardCheck, FileCheck, PartyPopper, Sparkles } from "lucide-react";
 import type { CalendarItem } from "@/lib/data/portal";
 
 /** Barvy a ikonky typů událostí v kalendáři (barva je vždy doplněna textem). */
@@ -8,4 +8,6 @@ export const KIND_META: Record<CalendarItem["kind"], { label: string; icon: type
   school_event: { label: "Školní akce", icon: PartyPopper, chip: "bg-lavender text-lavender-ink", dot: "bg-lavender-ink" },
   holiday: { label: "Volno", icon: CalendarOff, chip: "bg-mint text-mint-ink", dot: "bg-mint-ink" },
   other: { label: "Událost", icon: Sparkles, chip: "bg-yellow text-yellow-ink", dot: "bg-yellow-ink" },
+  notice_event: { label: "Událost třídy", icon: CalendarHeart, chip: "bg-cyan-soft text-cyan-ink", dot: "bg-cyan-ink" },
+  notice_deadline: { label: "Termín", icon: CalendarClock, chip: "bg-lime-soft text-lime-ink", dot: "bg-lime-ink" },
 };

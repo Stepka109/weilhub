@@ -244,6 +244,25 @@ export async function getAnnouncements(opts: { limit?: number } = {}) {
   return (data ?? []) as Announcement[];
 }
 
+/** Nadcházející události a termíny z oznámení (od dneška), nejbližší první. */
+export async function getUpcomingEvents(opts: { limit?: number; days?: number } = {}) {
+  const supabase = await createClient();
+  const today = todayIso();
+  let q = supabase
+    .from("announcements")
+    .select("*")
+    .eq("status", "published")
+    .neq("kind", "info")
+    .gte("event_date", today)
+    .order("event_date")
+    .order("event_time", { nullsFirst: true });
+  if (opts.days) q = q.lte("event_date", shiftDate(today, opts.days));
+  if (opts.limit) q = q.limit(opts.limit);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as Announcement[];
+}
+
 export async function getReadAnnouncementIds(userId: string) {
   const supabase = await createClient();
   const { data } = await supabase.from("announcement_reads").select("announcement_id").eq("user_id", userId);
@@ -267,7 +286,7 @@ export async function getLinks(): Promise<UsefulLink[]> {
 
 export interface CalendarItem {
   id: string;
-  kind: "exam" | "assignment" | "school_event" | "holiday" | "other";
+  kind: "exam" | "assignment" | "school_event" | "holiday" | "other" | "notice_event" | "notice_deadline";
   title: string;
   date: string;
   endDate: string;
@@ -286,10 +305,11 @@ export async function getCalendarItems(from: string, to: string, group?: StudyGr
     examQ = examQ.or(GROUP_FILTER(group));
     assignmentQ = assignmentQ.or(GROUP_FILTER(group));
   }
-  const [exams, assignments, events] = await Promise.all([
+  const [exams, assignments, events, notices] = await Promise.all([
     examQ,
     assignmentQ,
     supabase.from("events").select("*").eq("status", "published").lte("start_date", to).gte("end_date", from),
+    supabase.from("announcements").select("*").eq("status", "published").neq("kind", "info").gte("event_date", from).lte("event_date", to),
   ]);
   const { data: ttDays } = await supabase.from("timetable_day_overrides").select("*").gte("date", from).lte("date", to);
   const items: CalendarItem[] = [];
@@ -301,6 +321,19 @@ export async function getCalendarItems(from: string, to: string, group?: StudyGr
   }
   for (const ev of (events.data ?? []) as SchoolEvent[]) {
     items.push({ id: ev.id, kind: ev.kind, title: ev.title, date: ev.start_date, endDate: ev.end_date, time: ev.start_time, subject: null, description: ev.description, href: null });
+  }
+  for (const n of (notices.data ?? []) as Announcement[]) {
+    items.push({
+      id: n.id,
+      kind: n.kind === "deadline" ? "notice_deadline" : "notice_event",
+      title: n.title,
+      date: n.event_date!,
+      endDate: n.event_date!,
+      time: n.event_time,
+      subject: null,
+      description: n.body,
+      href: "/oznameni",
+    });
   }
   for (const d of (ttDays ?? []) as { id: string; date: string; kind: "holiday" | "event"; title: string; room: string | null; teacher: string | null }[]) {
     items.push({
