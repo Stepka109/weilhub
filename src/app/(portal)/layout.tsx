@@ -14,7 +14,12 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <AppShell
-      user={{ name: user.profile.display_name, avatarPath: user.profile.avatar_path, role: user.profile.role }}
+      user={{
+        name: user.profile.display_name,
+        avatarPath: user.profile.avatar_path,
+        role: user.profile.role,
+        newsSeen: user.profile.preferences?.newsSeen,
+      }}
       unread={unread}
     >
       {children}

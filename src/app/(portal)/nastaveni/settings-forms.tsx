@@ -39,7 +39,7 @@ export function SettingsForms({ preferences, email }: { preferences: UserPrefere
       <Card>
         <CardHeader title="Zobrazení" description="Skupina se ukládá k tvému účtu, vzhled jen v tomto zařízení." />
         <CardBody className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div id="vzhled" className="flex scroll-mt-28 flex-wrap items-center justify-between gap-4">
             <span>
               <span className="block font-medium text-ink">Vzhled</span>
               <span className="block text-sm text-muted">Světlý, tmavý, nebo podle nastavení zařízení.</span>

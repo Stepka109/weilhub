@@ -127,7 +127,7 @@ export function PushSettings({ subscriptions }: { subscriptions: { endpoint: str
   }
 
   return (
-    <Card className="mt-6">
+    <Card id="upozorneni" className="mt-6 scroll-mt-28">
       <CardHeader
         title="Upozornění"
         description="Telefon ti dá vědět o novém testu, úkolu, oznámení nebo změně v rozvrhu. Zapíná se zvlášť na každém zařízení."

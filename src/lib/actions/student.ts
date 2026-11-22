@@ -106,6 +106,7 @@ const prefsSchema = z.object({
   hideCompleted: z.boolean().optional(),
   compactLists: z.boolean().optional(),
   studyGroup: z.enum(["S1", "S2"]).nullable().optional(),
+  newsSeen: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export async function updatePreferences(input: z.input<typeof prefsSchema>): Promise<ActionResult> {

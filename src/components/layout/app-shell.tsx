@@ -31,11 +31,14 @@ import { signOut } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 import type { AppRole } from "@/lib/types";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { WhatsNew } from "@/components/layout/whats-new";
 
 export interface ShellUser {
   name: string;
   avatarPath: string | null;
   role: AppRole;
+  /** Poslední odkliknuté novinky (ikonka „i“ v liště) */
+  newsSeen?: string;
 }
 
 const ROLE_LABEL: Record<AppRole, string> = { admin: "Administrátor", editor: "Editor", student: "Student" };
@@ -208,13 +211,14 @@ export function AppShell({
         <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/85 pt-[var(--safe-top)] backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-[1320px] items-center gap-3 px-4 sm:px-6 lg:h-[76px] lg:px-8">
             <Link href="/" className="rounded-xl lg:hidden" aria-label="WeilHub – domů">
-              <Logo className="[&_span.font-display]:text-[1.15rem] [&_svg]:size-8" />
+              {/* Na úzkém telefonu jen symbol, aby se vešla tlačítka v liště */}
+              <Logo className="[&_.logo-text]:max-[420px]:hidden [&_span.font-display]:text-[1.15rem] [&_svg]:size-8" />
             </Link>
 
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="group ml-auto flex h-11 items-center gap-3 rounded-full border border-line bg-card px-4 text-left text-sm text-muted shadow-card transition-colors hover:border-line-strong lg:ml-0 lg:w-full lg:max-w-md"
+              className="group ml-auto flex h-10 items-center gap-3 rounded-full border border-line bg-card px-3 text-left sm:h-11 sm:px-4 text-sm text-muted shadow-card transition-colors hover:border-line-strong lg:ml-0 lg:w-full lg:max-w-md"
               aria-label="Hledat (Ctrl+K)"
             >
               <AnimatedIcon icon={Search} animation="wiggle" className="size-[18px] text-muted" />
@@ -224,11 +228,12 @@ export function AppShell({
               </kbd>
             </button>
 
-            <div className="flex items-center gap-1.5 lg:ml-auto">
+            <div className="flex items-center gap-1 sm:gap-1.5 lg:ml-auto">
+              <WhatsNew seen={user.newsSeen} />
               <ThemeToggle />
               <Link
                 href="/oznameni"
-                className="group relative grid size-11 place-items-center rounded-full border border-line bg-card text-slate-ink shadow-card transition-colors hover:text-primary"
+                className="group relative grid size-10 place-items-center rounded-full border border-line bg-card text-slate-ink shadow-card transition-colors hover:text-primary sm:size-11"
                 aria-label={unread > 0 ? `Oznámení, ${unread} nepřečtených` : "Oznámení"}
               >
                 <AnimatedIcon icon={Bell} animation="bell" className="size-5" />

@@ -53,7 +53,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       type="button"
       onClick={() => setThemePref(dark ? "light" : "dark")}
       className={cn(
-        "group grid size-11 place-items-center rounded-full border border-line bg-card text-slate-ink shadow-card transition-colors hover:text-primary",
+        "group grid size-10 place-items-center rounded-full border border-line bg-card text-slate-ink shadow-card transition-colors hover:text-primary sm:size-11",
         className,
       )}
       aria-label={dark ? "Přepnout na světlý vzhled" : "Přepnout na tmavý vzhled"}

@@ -27,14 +27,14 @@ export function Logo({ className, compact = false }: { className?: string; compa
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark />
       {!compact && (
-        <span className="font-display text-[1.35rem] leading-none font-extrabold tracking-[-0.03em]">
+        <span className="logo-text font-display text-[1.35rem] leading-none font-extrabold tracking-[-0.03em]">
           <span className="text-navy">Weil</span>
           <span className="text-teal">Hub</span>
         </span>
       )}
       {/* Svislý pruh v barvách Weilovky jako v logu školy */}
       {!compact && (
-        <span className="flex h-7 w-[3px] flex-col overflow-hidden rounded-full" aria-hidden>
+        <span className="logo-text flex h-7 w-[3px] flex-col overflow-hidden rounded-full" aria-hidden>
           <span className="flex-1 bg-lime" />
           <span className="flex-1 bg-teal" />
           <span className="flex-1 bg-cyan" />

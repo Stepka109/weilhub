@@ -25,6 +25,8 @@ export interface UserPreferences {
   compactLists?: boolean;
   /** Skupina u dělených předmětů (S1 / S2) */
   studyGroup?: "S1" | "S2" | null;
+  /** Poslední odkliknuté novinky v aplikaci (id z lib/news) */
+  newsSeen?: string;
 }
 
 export interface AppSettings {
