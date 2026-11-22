@@ -383,3 +383,34 @@ describe("události a termíny v oznámeních", () => {
     expect(await count("select 1 from public.announcements where kind = 'event' and status = 'published'")).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("push upozornění", () => {
+  const sub = (n: number) => [`https://push.example.com/${n}`, "p".repeat(40), "a".repeat(16)];
+
+  it("student přihlásí jen sám sebe a vidí jen své odběry", async () => {
+    await asUser(db, studentId);
+    await db.query("select public.push_subscribe($1, $2, $3, array['tests','assignments'], 'test')", sub(1));
+    await expect(
+      db.query("insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, $2, $3, $4)", [editorId, ...sub(9)]),
+    ).rejects.toThrow(/row-level security|permission denied/);
+    expect(await count("select 1 from public.push_subscriptions")).toBe(1);
+    await asUser(db, editorId);
+    expect(await count("select 1 from public.push_subscriptions")).toBe(0);
+  });
+
+  it("příjemce vydá jen redaktorovi, podle druhu a skupiny", async () => {
+    await asUser(db, studentId);
+    await expect(db.query("select * from public.push_targets('tests')")).rejects.toThrow(/oprávnění/);
+    await asUser(db, editorId);
+    expect(await count("select * from public.push_targets('tests')")).toBe(1);
+    expect(await count("select * from public.push_targets('timetable')")).toBe(0);
+    // Student má skupinu S2 → test jen pro S1 mu nepřijde
+    await asSuperuser(db);
+    await db.query("update public.profiles set preferences = preferences || '{\"studyGroup\":\"S2\"}' where id = $1", [studentId]);
+    await asUser(db, editorId);
+    expect(await count("select * from public.push_targets('tests', 'S1')")).toBe(0);
+    expect(await count("select * from public.push_targets('tests', 'S2')")).toBe(1);
+    await db.query("select public.push_forget(array[$1])", [sub(1)[0]]);
+    expect(await count("select * from public.push_targets('tests')")).toBe(0);
+  });
+});

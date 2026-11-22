@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import { dbErrorMessage, idSchema, invalid, revalidateAll, withRole } from "./helpers";
+import { notifyTimetableChange } from "./push-triggers";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatné datum.");
 const monday = date.refine((d) => new Date(`${d}T12:00:00Z`).getUTCDay() === 1, "Týden musí začínat pondělím.");
@@ -150,6 +151,15 @@ export async function saveOverride(input: z.input<typeof overrideSchema>): Promi
       .from("timetable_overrides")
       .upsert(rows, { onConflict: "week_start,day_of_week,lesson_number,study_group" });
     if (error) return { ok: false, error: dbErrorMessage(error) };
+    notifyTimetableChange(supabase, {
+      week_start: d.week_start,
+      day_of_week: d.day_of_week,
+      lesson_number: d.lesson_number,
+      lesson_to: last,
+      kind: d.kind,
+      label: d.kind === "event" ? (d.title ?? d.subject_code ?? "Akce třídy") : d.kind === "cancelled" ? "" : [d.subject_code?.toUpperCase(), d.room].filter(Boolean).join(" · "),
+      study_group: d.study_group,
+    });
     revalidateAll();
     const label = { changed: "Změna", new: "Nová hodina", event: "Akce", cancelled: "Zrušení hodiny" }[d.kind];
     const range = last > d.lesson_number ? ` (${d.lesson_number}.–${last}. hodina)` : "";

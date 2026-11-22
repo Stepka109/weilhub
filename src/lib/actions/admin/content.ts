@@ -13,6 +13,7 @@ import {
 } from "@/lib/validation/admin";
 import type { ActionResult } from "@/lib/types";
 import { dbErrorMessage, idSchema, invalid, revalidateAll, withRole } from "./helpers";
+import { notifyPublished, statusBefore } from "./push-triggers";
 
 type Input<T extends z.ZodType> = z.input<T>;
 
@@ -153,6 +154,7 @@ export async function saveExam(id: string | null, input: Input<typeof examSchema
     const parsed = examSchema.safeParse(input);
     if (!parsed.success) return invalid(parsed.error);
     const { material_ids, ...data } = parsed.data;
+    const before = await statusBefore(supabase, "exams", id);
     let examId = id;
     if (id) {
       const { error } = await supabase.from("exams").update(data).eq("id", id);
@@ -164,6 +166,7 @@ export async function saveExam(id: string | null, input: Input<typeof examSchema
     }
     const relErr = await syncRelations(supabase, "exam_materials", "exam_id", examId!, material_ids);
     if (relErr) return { ok: false, error: "Test byl uložen, ale související materiály se nepodařilo propojit." };
+    notifyPublished(supabase, "exams", examId!, before, data.status);
     revalidateAll();
     return { ok: true, data: { id: examId! }, message: id ? "Test byl uložen." : "Test byl vytvořen." };
   });
@@ -179,8 +182,10 @@ export async function setStatus(table: StatusTable, id: string, status: z.infer<
     if (!STATUS_TABLES.includes(table) || !idSchema.safeParse(id).success || !publicationStatus.safeParse(status).success) {
       return { ok: false, error: "Neplatný požadavek." };
     }
+    const before = await statusBefore(supabase, table, id);
     const { error } = await supabase.from(table).update({ status }).eq("id", id);
     if (error) return { ok: false, error: dbErrorMessage(error) };
+    if (table !== "events") notifyPublished(supabase, table, id, before, status);
     revalidateAll();
     const msg = { draft: "Staženo z publikace (koncept).", published: "Publikováno.", archived: "Archivováno." }[status];
     return { ok: true, message: msg };
@@ -222,11 +227,13 @@ export async function saveAnnouncement(id: string | null, input: Input<typeof an
   return withRole("staff", async ({ supabase }) => {
     const parsed = announcementSchema.safeParse(input);
     if (!parsed.success) return invalid(parsed.error);
+    const before = await statusBefore(supabase, "announcements", id);
     const q = id
       ? supabase.from("announcements").update(parsed.data).eq("id", id).select("id").single()
       : supabase.from("announcements").insert(parsed.data).select("id").single();
     const { data, error } = await q;
     if (error) return { ok: false, error: dbErrorMessage(error) };
+    notifyPublished(supabase, "announcements", data.id, before, parsed.data.status);
     revalidateAll();
     return { ok: true, data: { id: data.id }, message: "Oznámení bylo uloženo." };
   });

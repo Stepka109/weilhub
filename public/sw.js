@@ -55,3 +55,43 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(fetch(req).catch(() => caches.match(OFFLINE_URL)));
   }
 });
+
+/* ------------------------------------------------------------------ push
+ * Upozornění z WeilHubu (nový test, úkol, oznámení, změna rozvrhu…).
+ * Obsah upozornění posílá server; tady se jen zobrazí a po klepnutí
+ * otevře odpovídající stránka (jen v rámci WeilHubu).
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "WeilHub";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/192",
+      badge: "/icons/192",
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          return client.focus().then((c) => (c && "navigate" in c ? c.navigate(target) : undefined));
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});

@@ -6,6 +6,7 @@ import { assignmentSchema, materialSchema } from "@/lib/validation/admin";
 import type { ActionResult, TiptapNode } from "@/lib/types";
 import { dbErrorMessage, idSchema, invalid, revalidateAll, withRole } from "./helpers";
 import { cleanupStoragePaths, deleteFileRow } from "./storage";
+import { notifyPublished, statusBefore } from "./push-triggers";
 
 const MAX_CONTENT_BYTES = 1_000_000;
 
@@ -39,6 +40,7 @@ export async function saveMaterial(
       return { ok: false, error: "Nejprve uložte koncept a nahrajte soubor, potom materiál publikujte." };
     }
 
+    const before = await statusBefore(supabase, "materials", id);
     const row = {
       ...data,
       topic_id: data.topic_id ?? null,
@@ -59,6 +61,7 @@ export async function saveMaterial(
       for (const f of inline ?? []) if (!keep.has(f.id)) await deleteFileRow(supabase, "material", f.id, f.storage_path);
     }
 
+    notifyPublished(supabase, "materials", saved.id, before, data.status);
     revalidateAll();
     const message = data.status === "published" ? "Materiál je publikovaný." : data.status === "archived" ? "Materiál byl archivován." : "Koncept byl uložen.";
     return { ok: true, data: { id: saved.id, updatedAt: saved.updated_at }, message };
@@ -132,6 +135,7 @@ export async function saveAssignment(
     if (!parsed.success) return invalid(parsed.error);
     if (id && !idSchema.safeParse(id).success) return { ok: false, error: "Neplatný úkol." };
     const { material_ids, ...data } = parsed.data;
+    const before = await statusBefore(supabase, "assignments", id);
 
     const q = id
       ? supabase.from("assignments").update(data).eq("id", id).select("id").single()
@@ -146,6 +150,7 @@ export async function saveAssignment(
         .insert([...new Set(material_ids)].map((m) => ({ assignment_id: saved.id, material_id: m })));
       if (ins.error) return { ok: false, error: "Úkol byl uložen, ale související materiály se nepodařilo propojit." };
     }
+    notifyPublished(supabase, "assignments", saved.id, before, data.status);
     revalidateAll();
     return { ok: true, data: { id: saved.id }, message: id ? "Úkol byl uložen." : "Úkol byl vytvořen." };
   });
