@@ -6,6 +6,13 @@
  */
 export type ThemePref = "system" | "light" | "dark";
 
+/**
+ * Tmavý vzhled je v kódu hotový, ale zatím vypnutý. Přepnutím na `true`
+ * se vrátí tlačítko v liště, volba v Nastavení i přizpůsobení podle
+ * zařízení. Při vypnutí je stránka vždy světlá (data-theme="light").
+ */
+export const DARK_MODE_ENABLED = false;
+
 export const THEME_KEY = "wh-theme";
 export const THEME_EVENT = "wh-theme-change";
 

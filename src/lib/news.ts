@@ -1,3 +1,5 @@
+import { DARK_MODE_ENABLED } from "./theme";
+
 /**
  * Novinky v aplikaci (okno „i“ v horní liště). Při každém vydání stačí
  * změnit `id` a seznam – ikonka se pak každému znovu ukáže, dokud novinky
@@ -41,5 +43,5 @@ export const NEWS: { id: string; title: string; items: NewsItem[] } = {
       title: "Barvy Weilovky",
       text: "WeilHub má nové barvy podle loga školy.",
     },
-  ],
+  ].filter((item) => DARK_MODE_ENABLED || item.icon !== "moon") as NewsItem[],
 };

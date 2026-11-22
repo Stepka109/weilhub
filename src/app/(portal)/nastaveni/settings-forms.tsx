@@ -15,6 +15,7 @@ import { newPasswordSchema } from "@/lib/validation/auth";
 import type { UserPreferences } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ThemeChoice } from "@/components/layout/theme-toggle";
+import { DARK_MODE_ENABLED } from "@/lib/theme";
 
 export function SettingsForms({ preferences, email }: { preferences: UserPreferences; email: string }) {
   const [prefs, setPrefs] = useState(preferences);
@@ -37,8 +38,12 @@ export function SettingsForms({ preferences, email }: { preferences: UserPrefere
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card>
-        <CardHeader title="Zobrazení" description="Skupina se ukládá k tvému účtu, vzhled jen v tomto zařízení." />
+        <CardHeader
+          title="Zobrazení"
+          description={DARK_MODE_ENABLED ? "Skupina se ukládá k tvému účtu, vzhled jen v tomto zařízení." : "Předvolby se ukládají k tvému účtu."}
+        />
         <CardBody className="space-y-5">
+          {DARK_MODE_ENABLED && (
           <div id="vzhled" className="flex scroll-mt-28 flex-wrap items-center justify-between gap-4">
             <span>
               <span className="block font-medium text-ink">Vzhled</span>
@@ -46,6 +51,7 @@ export function SettingsForms({ preferences, email }: { preferences: UserPrefere
             </span>
             <ThemeChoice />
           </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span>
               <span className="block font-medium text-ink" id="pref-group">

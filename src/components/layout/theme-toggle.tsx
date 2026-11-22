@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { THEME_EVENT, THEME_KEY, type ThemePref } from "@/lib/theme";
+import { DARK_MODE_ENABLED, THEME_EVENT, THEME_KEY, type ThemePref } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 function readPref(): ThemePref {
@@ -46,6 +46,11 @@ export function setThemePref(pref: ThemePref) {
 
 /** Tlačítko v liště: přepne mezi světlým a tmavým vzhledem. */
 export function ThemeToggle({ className }: { className?: string }) {
+  if (!DARK_MODE_ENABLED) return null;
+  return <ThemeToggleButton className={className} />;
+}
+
+function ThemeToggleButton({ className }: { className?: string }) {
   const { effective } = useTheme();
   const dark = effective === "dark";
   return (
@@ -72,6 +77,11 @@ const OPTIONS: { pref: ThemePref; label: string; icon: typeof Sun }[] = [
 
 /** Volba vzhledu v Nastavení. */
 export function ThemeChoice() {
+  if (!DARK_MODE_ENABLED) return null;
+  return <ThemeChoiceButtons />;
+}
+
+function ThemeChoiceButtons() {
   const { pref } = useTheme();
   return (
     <div role="radiogroup" aria-label="Vzhled" className="inline-flex flex-wrap gap-1 rounded-full border border-line bg-card p-1">
