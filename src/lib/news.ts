@@ -39,7 +39,7 @@ export const NEWS: { id: string; title: string; items: NewsItem[] } = {
     {
       icon: "palette",
       title: "Barvy Weilovky",
-      text: "WeilHub má nové barvy podle loga školy. Rozvrh zůstal, jak ho znáš.",
+      text: "WeilHub má nové barvy podle loga školy.",
     },
   ],
 };
