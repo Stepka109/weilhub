@@ -311,7 +311,17 @@ export async function getCalendarItems(from: string, to: string, group?: StudyGr
     supabase.from("events").select("*").eq("status", "published").lte("start_date", to).gte("end_date", from),
     supabase.from("announcements").select("*").eq("status", "published").neq("kind", "info").gte("event_date", from).lte("event_date", to),
   ]);
-  const { data: ttDays } = await supabase.from("timetable_day_overrides").select("*").gte("date", from).lte("date", to);
+  const [{ data: ttDays }, { data: ttEvents }, { data: periods }] = await Promise.all([
+    supabase.from("timetable_day_overrides").select("*").gte("date", from).lte("date", to),
+    // Akce zadané v rozvrhu u jednotlivých hodin (exkurze, třídnická hodina…)
+    supabase
+      .from("timetable_overrides")
+      .select("week_start, day_of_week, lesson_number, subject_code, title, room, teacher, note, study_group")
+      .eq("kind", "event")
+      .gte("week_start", shiftDate(from, -6))
+      .lte("week_start", to),
+    supabase.from("timetable_periods").select("lesson_number, start_time, end_time"),
+  ]);
   const items: CalendarItem[] = [];
   for (const e of (exams.data ?? []) as unknown as (Exam & { subject: SubjectRef })[]) {
     items.push({ id: e.id, kind: "exam", title: e.title, date: e.exam_date, endDate: e.exam_date, time: e.exam_time, subject: e.subject, description: e.scope, href: `/testy#test-${e.id}` });
@@ -348,10 +358,61 @@ export async function getCalendarItems(from: string, to: string, group?: StudyGr
       href: `/rozvrh?tyden=${d.date}`,
     });
   }
+  items.push(...lessonEvents(ttEvents ?? [], periods ?? [], from, to, group ?? null));
   return items.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "99").localeCompare(b.time ?? "99"));
 }
 
 export function upcomingWindow(days = 60) {
   const today = todayIso();
   return { from: today, to: shiftDate(today, days) };
+}
+
+type LessonEventRow = {
+  week_start: string;
+  day_of_week: number;
+  lesson_number: number;
+  subject_code: string | null;
+  title: string | null;
+  room: string | null;
+  teacher: string | null;
+  note: string | null;
+  study_group: string;
+};
+
+/** Akce z rozvrhu jako položky kalendáře – navazující hodiny stejné akce v jeden den = jedna položka. */
+function lessonEvents(
+  rows: LessonEventRow[],
+  periods: { lesson_number: number; start_time: string; end_time: string }[],
+  from: string,
+  to: string,
+  group: StudyGroup | null,
+): CalendarItem[] {
+  const byDay = new Map<string, LessonEventRow[]>();
+  for (const r of rows) {
+    if (group && r.study_group !== "all" && r.study_group !== group) continue;
+    const date = shiftDate(r.week_start, r.day_of_week - 1);
+    if (date < from || date > to) continue;
+    const key = `${date}|${r.title ?? ""}|${r.subject_code ?? ""}`;
+    byDay.set(key, [...(byDay.get(key) ?? []), r]);
+  }
+  const items: CalendarItem[] = [];
+  for (const [key, list] of byDay) {
+    const date = key.split("|")[0];
+    const lessons = [...new Set(list.map((r) => r.lesson_number))].sort((a, b) => a - b);
+    const first = list.find((r) => r.lesson_number === lessons[0])!;
+    const start = periods.find((p) => p.lesson_number === lessons[0])?.start_time ?? null;
+    const range = lessons.length > 1 ? `${lessons[0]}.–${lessons.at(-1)}. hodina` : `${lessons[0]}. hodina`;
+    items.push({
+      id: `tt-${key}`,
+      kind: "school_event",
+      title: first.title || first.subject_code || "Akce třídy",
+      date,
+      endDate: date,
+      time: start,
+      subject: null,
+      description: [range, first.room, first.teacher, first.note].filter(Boolean).join(" · "),
+      href: `/rozvrh?tyden=${first.week_start}`,
+    });
+  }
+  return items;
 }

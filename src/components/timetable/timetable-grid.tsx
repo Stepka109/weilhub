@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Dialog as D } from "radix-ui";
-import { ArrowLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, NotebookPen, Plus, X } from "lucide-react";
 import { WEEKDAYS, WEEKDAYS_SHORT, formatDate, formatTime, TIME_ZONE } from "@/lib/dates";
 import {
   STATUS_LABEL,
@@ -11,10 +11,12 @@ import {
   isSplit,
   markKey,
   minutes,
+  noteFor,
   placeMarks,
   type Cell,
   type DayRow,
   type EventSpan,
+  type LessonNote,
   type TimetableMark,
   type TimetableWeek,
 } from "@/lib/timetable";
@@ -70,6 +72,8 @@ export interface DetailTarget {
   rows: [string, string][];
   note?: { text: string; tone: "red" | "green" | "purple" };
   marks?: TimetableMark[];
+  /** Zápis z hodiny – co se dělalo, případně odkaz na zápis */
+  lessonNote?: LessonNote | null;
 }
 
 export function cellDetail(cell: Cell, row: DayRow, week: TimetableWeek, endLesson?: number): DetailTarget {
@@ -146,6 +150,22 @@ export function TimetableDetail({ target, onClose }: { target: DetailTarget | nu
                   </div>
                 ))}
               </dl>
+              {target.lessonNote && (
+                <section className="mx-4 mb-4 rounded-2xl border border-[#b9e2a3] bg-[#f1faea] px-4 py-3 sm:mx-6 sm:mt-4" aria-label="Zápis z hodiny">
+                  <p className="flex items-center gap-2 text-xs font-semibold text-[#3d7a13] uppercase">
+                    <NotebookPen className="size-4" aria-hidden /> Zápis z hodiny
+                  </p>
+                  {target.lessonNote.content && <p className="mt-1.5 whitespace-pre-line text-ink">{target.lessonNote.content}</p>}
+                  {target.lessonNote.material && (
+                    <Link
+                      href={`/materialy/${target.lessonNote.material.id}`}
+                      className="mt-2 inline-flex items-center gap-1 font-semibold text-[#3d7a13] hover:underline"
+                    >
+                      {target.lessonNote.material.title} <ChevronRight className="size-4" aria-hidden />
+                    </Link>
+                  )}
+                </section>
+              )}
               {!!target.marks?.length && (
                 <ul className="mx-4 mb-4 space-y-2 sm:mx-6 sm:mt-4" aria-label="Testy a úkoly">
                   {target.marks.map((m) => (
@@ -193,10 +213,13 @@ export function TimetableGrid({
   onCellClick,
   onDayClick,
   marks = [],
+  notes = [],
 }: {
   week: TimetableWeek;
   /** Testy a úkoly – odznaky T / U u první hodiny předmětu v daný den */
   marks?: TimetableMark[];
+  /** Zápisy z hodin – u hodiny se zápisem zelená fajfka vpravo dole */
+  notes?: LessonNote[];
   editable?: boolean;
   onCellClick?: (cell: Cell, row: DayRow) => void;
   onDayClick?: (row: DayRow) => void;
@@ -211,7 +234,7 @@ export function TimetableGrid({
   function openCell(cell: Cell, row: DayRow, span?: EventSpan) {
     if (editable) return onCellClick?.(cell, row);
     if (cell.status === "empty") return;
-    setDetail({ ...cellDetail(cell, row, week, span?.endLesson), marks: marksFor(row, cell) });
+    setDetail({ ...cellDetail(cell, row, week, span?.endLesson), marks: marksFor(row, cell), lessonNote: noteFor(notes, row.date, cell) });
   }
 
   /** `half` = polovina rozdělené buňky (jedna skupina) */
@@ -242,19 +265,25 @@ export function TimetableGrid({
     const cancelled = cell.status === "cancelled";
     const greenCancel = cancelled && cell.override?.accent === "green";
     const cellMarks = marksFor(row, cell);
+    const hasNote = !!noteFor(notes, row.date, cell);
     const kinds = (["test", "assignment"] as const).filter((k) => cellMarks.some((m) => m.kind === k));
     return (
       <button
         type="button"
         className={cn(half ? "tt-half" : "tt-card", `st-${cell.status}`, greenCancel && "st-cancelled-green", isNow && "is-now")}
         onClick={() => openCell(cell, row)}
-        aria-label={`${label}: ${cell.name || cell.code}${cell.status !== "default" ? ` – ${STATUS_LABEL[cell.status as keyof typeof STATUS_LABEL]}` : ""}${kinds.map((k) => ` – ${MARK_LABEL[k].toLowerCase()}`).join("")}`}
+        aria-label={`${label}: ${cell.name || cell.code}${cell.status !== "default" ? ` – ${STATUS_LABEL[cell.status as keyof typeof STATUS_LABEL]}` : ""}${kinds.map((k) => ` – ${MARK_LABEL[k].toLowerCase()}`).join("")}${hasNote ? " – zápis z hodiny" : ""}`}
       >
         {tag && <span className="tt-tag">{tag}</span>}
         {cell.group !== "all" && <span className="tt-group" data-g={cell.group}>{cell.group}</span>}
         {/* Odpadlá hodina je uprostřed prázdná – jen ohraničení a odznak O */}
         {!cancelled && <span className="tt-code">{cell.code}</span>}
         {!cancelled && cell.room && <span className="tt-room">{cell.room}</span>}
+        {hasNote && (
+          <span className="tt-note-check" aria-hidden>
+            <Check strokeWidth={3.5} />
+          </span>
+        )}
         {kinds.length > 0 && (
           <span className="tt-marks" aria-hidden>
             {kinds.map((k) => (

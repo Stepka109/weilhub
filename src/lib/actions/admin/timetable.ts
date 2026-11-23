@@ -195,6 +195,49 @@ export async function clearOverride(input: {
   });
 }
 
+/* ----------------------------------------------------------- zápis z hodiny */
+
+const lessonNoteSchema = z
+  .object({
+    date,
+    lesson_number: lesson,
+    study_group: studyGroup,
+    subject_code: text(10),
+    content: z.string().trim().max(5000, "Zápis může mít nejvýše 5000 znaků."),
+    material_id: z
+      .string()
+      .transform((v) => (v === "" ? null : v))
+      .pipe(z.uuid("Neplatný materiál.").nullable())
+      .nullable()
+      .optional(),
+  })
+  .refine((v) => v.content.length > 0 || v.material_id, { message: "Napište, co se v hodině dělalo, nebo vyberte zápis.", path: ["content"] });
+
+/** Uloží zápis z konkrétní hodiny (co se dělalo + případný odkaz na zápis). */
+export async function saveLessonNote(input: z.input<typeof lessonNoteSchema>): Promise<ActionResult> {
+  return withRole("staff", async ({ supabase }) => {
+    const parsed = lessonNoteSchema.safeParse(input);
+    if (!parsed.success) return invalid(parsed.error);
+    const d = parsed.data;
+    const { error } = await supabase
+      .from("lesson_notes")
+      .upsert({ ...d, material_id: d.material_id ?? null }, { onConflict: "date,lesson_number,study_group" });
+    if (error) return { ok: false, error: dbErrorMessage(error) };
+    revalidateAll();
+    return { ok: true, message: "Zápis z hodiny byl uložen." };
+  });
+}
+
+export async function deleteLessonNote(id: string): Promise<ActionResult> {
+  return withRole("staff", async ({ supabase }) => {
+    if (!idSchema.safeParse(id).success) return { ok: false, error: "Neplatný zápis." };
+    const { error } = await supabase.from("lesson_notes").delete().eq("id", id);
+    if (error) return { ok: false, error: dbErrorMessage(error) };
+    revalidateAll();
+    return { ok: true, message: "Zápis z hodiny byl smazán." };
+  });
+}
+
 /* ---------------------------------------------------------- celodenní záznam */
 
 const daySchema = z.object({

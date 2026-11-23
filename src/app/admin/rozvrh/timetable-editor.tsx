@@ -3,17 +3,26 @@
 import * as React from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
-import { CalendarCheck2, CalendarOff, CalendarPlus, CircleSlash, Pencil, RotateCcw, Rows3, Trash2 } from "lucide-react";
+import { CalendarCheck2, CalendarOff, CalendarPlus, CircleSlash, NotebookPen, Pencil, RotateCcw, Rows3, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
-import { Field, Input, Select } from "@/components/ui/form-controls";
+import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { TimetableGrid } from "@/components/timetable/timetable-grid";
-import { clearOverride, deleteDayOverride, deleteSlot, saveDayOverride, saveOverride, saveSlot } from "@/lib/actions/admin/timetable";
+import {
+  clearOverride,
+  deleteDayOverride,
+  deleteLessonNote,
+  deleteSlot,
+  saveDayOverride,
+  saveLessonNote,
+  saveOverride,
+  saveSlot,
+} from "@/lib/actions/admin/timetable";
 import { useAction } from "@/lib/use-action";
 import { WEEKDAYS, formatDate, formatTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import type { Cell, DayRow, SlotGroup, TimetableWeek } from "@/lib/timetable";
+import { markMatchesCell, noteFor, type Cell, type DayRow, type LessonNote, type SlotGroup, type TimetableWeek } from "@/lib/timetable";
 import type { TimetableSubject, TimetableTeacher } from "@/lib/data/timetable";
 
 type Mode = "default" | "changed" | "new" | "event" | "cancelled";
@@ -43,16 +52,103 @@ interface CellValues {
   note: string;
 }
 
+export interface NoteMaterial {
+  id: string;
+  title: string;
+  subject: string;
+  abbr: string;
+  draft: boolean;
+}
+
+/** Zápis z hodiny: co se dělalo + odkaz na zápis (materiál). */
+function LessonNoteSection({
+  date,
+  cell,
+  group,
+  existing,
+  materials,
+  onDone,
+}: {
+  date: string;
+  cell: Cell;
+  group: SlotGroup;
+  existing: LessonNote | null;
+  materials: NoteMaterial[];
+  onDone: () => void;
+}) {
+  const { pending, run } = useAction();
+  const [content, setContent] = React.useState(existing?.content ?? "");
+  const [materialId, setMaterialId] = React.useState(existing?.material_id ?? "");
+  // Zápisy předmětu hodiny nahoře, ostatní pod nimi
+  const own = materials.filter((m) => markMatchesCell({ subjectName: m.subject, subjectAbbr: m.abbr }, cell));
+  const rest = materials.filter((m) => !own.includes(m));
+  const option = (m: NoteMaterial) => (
+    <option key={m.id} value={m.id}>
+      {m.title}
+      {m.draft ? " (koncept)" : ""}
+    </option>
+  );
+
+  return (
+    <section className="mt-6 space-y-3 border-t border-line pt-5" aria-labelledby="ln-title">
+      <h3 id="ln-title" className="font-semibold text-ink">
+        Zápis z hodiny
+        {group !== "all" && <span className="ml-2 text-sm font-normal text-muted">(skupina {group})</span>}
+      </h3>
+      <Field label="Co se v hodině dělalo" htmlFor="ln-content" hint="Studenti to uvidí v detailu hodiny, u hodiny se ukáže zelená fajfka.">
+        <Textarea id="ln-content" rows={3} value={content} onChange={(e) => setContent(e.target.value)} placeholder="např. Převody číselných soustav, příklady 1–5" />
+      </Field>
+      <Field label="Odkaz na zápis" htmlFor="ln-material" hint="Nepovinné. Koncept uvidí studenti až po zveřejnění.">
+        <Select id="ln-material" value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
+          <option value="">Bez odkazu</option>
+          {own.length > 0 && <optgroup label={`Předmět ${cell.code}`}>{own.map(option)}</optgroup>}
+          {rest.length > 0 && <optgroup label="Ostatní materiály">{rest.map(option)}</optgroup>}
+        </Select>
+      </Field>
+      <div className="flex flex-wrap justify-end gap-2">
+        {existing && (
+          <Button
+            variant="danger-soft"
+            loading={pending}
+            onClick={async () => {
+              const res = await run(() => deleteLessonNote(existing.id));
+              if (res.ok) onDone();
+            }}
+          >
+            <Trash2 /> Smazat zápis
+          </Button>
+        )}
+        <Button
+          variant="secondary"
+          loading={pending}
+          onClick={async () => {
+            const res = await run(() =>
+              saveLessonNote({ date, lesson_number: cell.lesson, study_group: group, subject_code: cell.code || null, content, material_id: materialId }),
+            );
+            if (res.ok) onDone();
+          }}
+        >
+          <NotebookPen /> Uložit zápis
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function CellDialog({
   target,
   week,
   catalog,
   onClose,
+  notes,
+  materials,
 }: {
   target: { cell: Cell; row: DayRow } | null;
   week: TimetableWeek;
   catalog: { subjects: TimetableSubject[]; teachers: TimetableTeacher[] };
   onClose: () => void;
+  notes: LessonNote[];
+  materials: NoteMaterial[];
 }) {
   const { pending, run } = useAction();
   const cell = target?.cell;
@@ -408,6 +504,17 @@ function CellDialog({
             </div>
           </DialogFooter>
         </form>
+        {cell.status !== "empty" && (
+          <LessonNoteSection
+            key={`${key}-${group}`}
+            date={target.row.date}
+            cell={cell}
+            group={group}
+            existing={notes.find((n) => n.date === target.row.date && n.lesson_number === cell.lesson && n.study_group === group) ?? noteFor(notes, target.row.date, { lesson: cell.lesson, group })}
+            materials={materials}
+            onDone={onClose}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -514,12 +621,16 @@ export function TimetableEditor({
   catalog,
   allLessons,
   groupParam,
+  notes,
+  materials,
 }: {
   week: TimetableWeek;
   catalog: { subjects: TimetableSubject[]; teachers: TimetableTeacher[] };
   allLessons: boolean;
   /** `&skupina=…` – zachová zvolenou skupinu při přepnutí rozsahu hodin */
   groupParam: string;
+  notes: LessonNote[];
+  materials: NoteMaterial[];
 }) {
   const [cellTarget, setCellTarget] = React.useState<{ cell: Cell; row: DayRow } | null>(null);
   const [dayTarget, setDayTarget] = React.useState<DayRow | null>(null);
@@ -538,11 +649,12 @@ export function TimetableEditor({
       </div>
       <TimetableGrid
         week={week}
+        notes={notes}
         editable
         onCellClick={(cell, row) => setCellTarget({ cell, row })}
         onDayClick={(row) => setDayTarget(row)}
       />
-      <CellDialog target={cellTarget} week={week} catalog={catalog} onClose={() => setCellTarget(null)} />
+      <CellDialog target={cellTarget} week={week} catalog={catalog} notes={notes} materials={materials} onClose={() => setCellTarget(null)} />
       <DayDialog row={dayTarget} onClose={() => setDayTarget(null)} teachers={catalog.teachers.map((t) => t.name)} />
     </>
   );

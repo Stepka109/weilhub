@@ -296,3 +296,18 @@ describe("události a termíny v oznámeních", () => {
     expect([deadline.kind, deadline.event_date, deadline.event_time]).toEqual(["deadline", "2026-11-30", null]);
   });
 });
+
+describe("zápis z hodiny", () => {
+  it("zápis patří ke správné hodině a skupině", async () => {
+    const { noteFor } = await import("@/lib/timetable");
+    const n = (lesson_number: number, study_group: "all" | "S1" | "S2") => ({
+      id: `${lesson_number}${study_group}`, date: "2026-11-23", lesson_number, study_group, subject_code: null, content: "x", material_id: null, material: null,
+    });
+    const notes = [n(5, "S2"), n(6, "all")];
+    expect(noteFor(notes, "2026-11-23", { lesson: 5, group: "S2" })?.id).toBe("5S2");
+    expect(noteFor(notes, "2026-11-23", { lesson: 5, group: "S1" })).toBeNull();
+    expect(noteFor(notes, "2026-11-23", { lesson: 6, group: "S1" })?.id).toBe("6all");
+    expect(noteFor(notes, "2026-11-23", { lesson: 5, group: "all" })?.id).toBe("5S2");
+    expect(noteFor(notes, "2026-11-24", { lesson: 5, group: "S2" })).toBeNull();
+  });
+});

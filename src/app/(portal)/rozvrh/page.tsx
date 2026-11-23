@@ -6,7 +6,7 @@ import { GroupSwitch, WeekNav, groupQuery } from "@/components/timetable/week-na
 import { GroupPicker } from "@/components/portal/group-picker";
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data/portal";
-import { getTimetableMarks, getTimetableWeek } from "@/lib/data/timetable";
+import { getLessonNotes, getTimetableMarks, getTimetableWeek } from "@/lib/data/timetable";
 import { formatDate, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
 import { isSpan, isSplit, parseGroupView, type Cell } from "@/lib/timetable";
 
@@ -24,10 +24,11 @@ export default async function TimetablePage({ searchParams }: PageProps<"/rozvrh
   const thisWeek = schoolWeek(today);
   const defaultMonday = today > thisWeek[4] ? shiftDate(thisWeek[0], 7) : thisWeek[0];
   const monday = typeof sp.tyden === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.tyden) ? schoolWeek(sp.tyden)[0] : defaultMonday;
-  const [{ week, hasAnySlots }, settings, marks] = await Promise.all([
+  const [{ week, hasAnySlots }, settings, marks, notes] = await Promise.all([
     getTimetableWeek(monday, { group: view }),
     getSettings(),
     getTimetableMarks(monday),
+    getLessonNotes(monday),
   ]);
   const changes = week.days.reduce(
     (n, d) => n + d.items.filter((i) => (isSpan(i) ? true : isSplit(i) ? isChange(i.s1) || isChange(i.s2) : isChange(i))).length,
@@ -62,7 +63,7 @@ export default async function TimetablePage({ searchParams }: PageProps<"/rozvrh
       {!myGroup && <GroupPicker className="mb-4" text="Rozvrh se ti pak otevře rovnou pro tvou skupinu. Ostatní skupinu i celý rozvrh uvidíš přepínačem výše." />}
 
       {hasAnySlots ? (
-        <TimetableGrid week={week} marks={marks} />
+        <TimetableGrid week={week} marks={marks} notes={notes} />
       ) : (
         <p className="rounded-card border border-line bg-card px-6 py-12 text-center text-muted">
           Rozvrh zatím nebyl vyplněn. Správce ho může nastavit v administraci.

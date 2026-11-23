@@ -6,6 +6,7 @@ import {
   type CycleConfig,
   type DayOverride,
   type GroupView,
+  type LessonNote,
   type Override,
   type Period,
   type Slot,
@@ -131,4 +132,18 @@ export async function getTimetableMarks(monday: string): Promise<TimetableMark[]
     marks.push({ kind: "assignment", id: a.id, title: a.title, date: a.due_date, subjectName: a.subject.name, subjectAbbr: a.subject.abbreviation, href: `/ukoly/${a.id}`, group: a.study_group });
   }
   return marks;
+}
+
+/** Zápisy z hodin v daném týdnu (odkaz jen na zveřejněný zápis). */
+export async function getLessonNotes(monday: string): Promise<LessonNote[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("lesson_notes")
+    .select("id, date, lesson_number, study_group, subject_code, content, material_id, material:materials(id, title, status)")
+    .gte("date", monday)
+    .lte("date", shiftDate(monday, 4));
+  return ((data ?? []) as unknown as (LessonNote & { material: { id: string; title: string; status: string } | null })[]).map((n) => ({
+    ...n,
+    material: n.material && n.material.status === "published" ? { id: n.material.id, title: n.material.title } : null,
+  }));
 }

@@ -3,7 +3,8 @@ import { GroupSwitch, WeekNav, groupQuery } from "@/components/timetable/week-na
 import { TimetableLegend } from "@/components/timetable/timetable-grid";
 import { requireStaff } from "@/lib/auth";
 import { getSettings } from "@/lib/data/portal";
-import { getTimetableCatalog, getTimetableWeek } from "@/lib/data/timetable";
+import { getLessonNotes, getTimetableCatalog, getTimetableWeek } from "@/lib/data/timetable";
+import { getAdminMaterials } from "@/lib/data/admin";
 import { formatDate, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
 import { cycleWeekFor, parseGroupView } from "@/lib/timetable";
 import { TimetableEditor } from "./timetable-editor";
@@ -29,10 +30,12 @@ export default async function AdminTimetablePage({ searchParams }: PageProps<"/a
   const defaultMonday = today > thisWeek[4] ? shiftDate(thisWeek[0], 7) : thisWeek[0];
   const monday = typeof sp.tyden === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.tyden) ? schoolWeek(sp.tyden)[0] : defaultMonday;
 
-  const [{ week, settings }, catalog, appSettings] = await Promise.all([
+  const [{ week, settings }, catalog, appSettings, notes, materials] = await Promise.all([
     getTimetableWeek(monday, { allLessons, group: view }),
     getTimetableCatalog(),
     getSettings(),
+    getLessonNotes(monday),
+    getAdminMaterials(400),
   ]);
 
   return (
@@ -58,7 +61,16 @@ export default async function AdminTimetablePage({ searchParams }: PageProps<"/a
             isCurrent={week.monday === defaultMonday}
             extraQuery={`${groupParam}${allLessons ? "&vse=1" : ""}`}
           />
-          <TimetableEditor week={week} catalog={catalog} allLessons={allLessons} groupParam={groupParam} />
+          <TimetableEditor
+            week={week}
+            catalog={catalog}
+            allLessons={allLessons}
+            groupParam={groupParam}
+            notes={notes}
+            materials={materials
+              .filter((m) => m.status !== "archived")
+              .map((m) => ({ id: m.id, title: m.title, subject: m.subject?.name ?? "", abbr: m.subject?.abbreviation ?? "", draft: m.status === "draft" }))}
+          />
           <div className="mt-5">
             <TimetableLegend />
           </div>

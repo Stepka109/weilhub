@@ -414,3 +414,22 @@ describe("push upozornění", () => {
     expect(await count("select * from public.push_targets('tests')")).toBe(0);
   });
 });
+
+describe("zápis z hodiny", () => {
+  it("zapsat smí redaktor, student jen číst; prázdný zápis nejde", async () => {
+    await asUser(db, editorId);
+    await db.query("insert into public.lesson_notes (date, lesson_number, study_group, subject_code, content) values ('2026-11-23', 5, 'S2', 'HDW', 'Převody soustav, str. 12')");
+    await expect(db.query("insert into public.lesson_notes (date, lesson_number, content) values ('2026-11-23', 6, '')")).rejects.toThrow(/check constraint/);
+    await expect(db.query("insert into public.lesson_notes (date, lesson_number, content) values ('2026-11-22', 1, 'neděle')")).rejects.toThrow(/check constraint/);
+    await asUser(db, studentId);
+    expect(await count("select 1 from public.lesson_notes")).toBe(1);
+    await expect(db.query("insert into public.lesson_notes (date, lesson_number, content) values ('2026-11-24', 1, 'x')")).rejects.toThrow(/row-level security/);
+  });
+
+  it("upozornění chodí i autorovi", async () => {
+    await asUser(db, editorId);
+    await db.query("select public.push_subscribe($1, $2, $3, array['tests'], 'editor')", ["https://push.example.com/editor", "p".repeat(40), "a".repeat(16)]);
+    const res = await db.query<{ target_endpoint: string }>("select target_endpoint from public.push_targets('tests')");
+    expect(res.rows.map((r) => r.target_endpoint)).toContain("https://push.example.com/editor");
+  });
+});

@@ -428,3 +428,32 @@ export function examLessonEnd(
   const last = cells.reduce((max, c) => Math.max(max, c.lesson), -1);
   return last >= 0 ? periodEnd(last) : null;
 }
+
+/* ------------------------------------------------------- zápis z hodiny */
+
+/** Co se v konkrétní hodině dělalo (+ případný odkaz na zápis). */
+export interface LessonNote {
+  id: string;
+  date: string;
+  lesson_number: number;
+  study_group: SlotGroup;
+  subject_code: string | null;
+  content: string;
+  /** Připojený zápis (i nezveřejněný – pro administraci) */
+  material_id: string | null;
+  /** Zveřejněný zápis, na který vede odkaz */
+  material: { id: string; title: string } | null;
+}
+
+/**
+ * Zápis k buňce rozvrhu: nejdřív přesně pro danou skupinu, jinak zápis celé
+ * třídy (u hodiny celé třídy i zápis kterékoli skupiny).
+ */
+export function noteFor(notes: LessonNote[], date: string, cell: Pick<Cell, "lesson" | "group">): LessonNote | null {
+  const here = notes.filter((n) => n.date === date && n.lesson_number === cell.lesson);
+  return (
+    here.find((n) => n.study_group === cell.group) ??
+    here.find((n) => n.study_group === "all") ??
+    (cell.group === "all" ? (here[0] ?? null) : null)
+  );
+}

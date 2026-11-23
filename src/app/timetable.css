@@ -153,6 +153,18 @@
 .wh-tt .tt-half-empty.is-add { cursor: pointer; color: var(--wh-muted); }
 .wh-tt .tt-half-empty.is-add:hover { border-color: var(--tt-cell-border); background: var(--wh-light-blue); }
 
+/* zápis z hodiny: zelený čtvereček s bílou fajfkou vpravo dole */
+.wh-tt .tt-note-check {
+  position: absolute; right: 5px; bottom: 5px; width: 20px; height: 20px;
+  display: grid; place-items: center; border-radius: 5px;
+  background: #34c759; color: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.wh-tt .tt-note-check svg { width: 14px; height: 14px; }
+/* v polovině rozdělené hodiny fajfka vpravo nahoře, štítek skupiny vpravo dole */
+.wh-tt .tt-half .tt-note-check { top: 3px; bottom: auto; right: 3px; width: 14px; height: 14px; border-radius: 4px; }
+.wh-tt .tt-half .tt-note-check svg { width: 10px; height: 10px; }
+.wh-tt .tt-half:has(> .tt-note-check) > .tt-group { top: auto; bottom: 3px; transform: none; }
+
 /* odznaky T (test) a U (úkol) vlevo dole */
 .wh-tt .tt-marks { position: absolute; left: 5px; bottom: 5px; display: flex; gap: 3px; }
 .tt-mark-letter {
@@ -201,6 +213,10 @@
   .wh-tt .tt-room { font-size: .62rem; }
   .wh-tt .tt-tag { min-width: 17px; height: 20px; font-size: .62rem; }
   .wh-tt .tt-marks { left: 3px; bottom: 3px; gap: 2px; }
+  .wh-tt .tt-note-check { right: 3px; bottom: 3px; width: 16px; height: 16px; border-radius: 4px; }
+  .wh-tt .tt-note-check svg { width: 11px; height: 11px; }
+  .wh-tt .tt-half .tt-note-check { top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 3px; }
+  .wh-tt .tt-half .tt-note-check svg { width: 9px; height: 9px; }
   .wh-tt .tt-split { gap: 3px; }
   .wh-tt .tt-half { padding: 1px 17px; border-radius: 6px; }
   .wh-tt .tt-half > .tt-group { right: 3px; }
