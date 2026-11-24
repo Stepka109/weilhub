@@ -433,3 +433,49 @@ describe("zápis z hodiny", () => {
     expect(res.rows.map((r) => r.target_endpoint)).toContain("https://push.example.com/editor");
   });
 });
+
+describe("hlasování a aktivita", () => {
+  let pollId: string;
+  let textPollId: string;
+
+  it("anketu vytvoří redaktor, student hlasuje jen za sebe a podle pravidel", async () => {
+    await asUser(db, editorId);
+    pollId = (await db.query<{ id: string }>("insert into public.polls (question, kind, options, status) values ('Kam na výlet?', 'single', array['Praha','Brno','Ostrava'], 'published') returning id")).rows[0].id;
+    textPollId = (await db.query<{ id: string }>("insert into public.polls (question, kind, status, anonymous) values ('Nápady?', 'text', 'published', true) returning id")).rows[0].id;
+    await asUser(db, studentId);
+    await expect(db.query("insert into public.polls (question, kind, options) values ('x', 'single', array['a','b'])")).rejects.toThrow(/row-level security/);
+    // Výsledky před hlasováním student nevidí
+    expect((await db.query<{ r: unknown }>("select public.poll_results($1) as r", [pollId])).rows[0].r).toBeNull();
+    await expect(db.query("insert into public.poll_votes (poll_id, choices) values ($1, array[0,1]::smallint[])", [pollId])).rejects.toThrow(/jednu možnost/);
+    await expect(db.query("insert into public.poll_votes (poll_id, choices) values ($1, array[7]::smallint[])", [pollId])).rejects.toThrow(/Neplatná/);
+    await db.query("insert into public.poll_votes (poll_id, choices) values ($1, array[1]::smallint[])", [pollId]);
+    await expect(db.query("insert into public.poll_votes (poll_id, user_id, choices) values ($1, $2, array[0]::smallint[])", [pollId, editorId])).rejects.toThrow(/row-level security/);
+    const r = (await db.query<{ r: { voters: number; counts: number[] } }>("select public.poll_results($1) as r", [pollId])).rows[0].r;
+    expect(r).toEqual({ voters: 1, counts: [0, 1, 0] });
+    await db.query("insert into public.poll_votes (poll_id, answer) values ($1, '  Bowling  ')", [textPollId]);
+    expect((await db.query<{ answer: string }>("select answer from public.poll_votes where poll_id = $1", [textPollId])).rows[0].answer).toBe("Bowling");
+  });
+
+  it("do uzavřené ankety hlasovat nejde", async () => {
+    await asUser(db, editorId);
+    await db.query("update public.polls set closes_at = now() - interval '1 minute' where id = $1", [pollId]);
+    await asUser(db, studentId);
+    await expect(db.query("update public.poll_votes set choices = array[0]::smallint[] where poll_id = $1", [pollId])).rejects.toThrow(/uzavřené/);
+  });
+
+  it("otevření materiálu se zapíše, přehled aktivity vidí jen redaktor", async () => {
+    await asUser(db, studentId);
+    const m = (await db.query<{ id: string }>("select id from public.materials where status = 'published' limit 1")).rows[0].id;
+    await db.query("select public.record_material_view($1)", [m]);
+    await db.query("select public.record_material_view($1)", [m]);
+    expect((await db.query<{ views: number }>("select views from public.material_views where material_id = $1", [m])).rows[0].views).toBe(2);
+    await expect(db.query("select public.activity_summary()")).rejects.toThrow(/oprávnění/);
+    await asUser(db, editorId);
+    const s = (await db.query<{ s: { people: number; materials: Record<string, number>; polls: Record<string, number> } }>("select public.activity_summary() as s")).rows[0].s;
+    expect(s.materials[m]).toBe(1);
+    expect(s.polls[pollId]).toBe(1);
+    const people = await db.query<{ person: string; seen_at: string | null }>("select * from public.activity_people('material', $1)", [m]);
+    expect(people.rows.find((p) => p.person === "Jana")?.seen_at).not.toBeNull();
+    await expect(db.query("select * from public.activity_people('poll', $1)", [textPollId])).rejects.toThrow(/anonymní/);
+  });
+});

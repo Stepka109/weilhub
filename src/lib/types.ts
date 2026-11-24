@@ -154,6 +154,29 @@ export interface Exam {
   updated_at: string;
 }
 
+/** Hlasování: jedna možnost / více možností / krátká odpověď */
+export type PollKind = "single" | "multiple" | "text";
+
+export interface Poll {
+  id: string;
+  question: string;
+  description: string;
+  kind: PollKind;
+  options: string[];
+  closes_at: string | null;
+  show_results: boolean;
+  anonymous: boolean;
+  status: PublicationStatus;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PollResults {
+  voters: number;
+  counts: number[];
+}
+
 export interface SchoolEvent {
   id: string;
   title: string;

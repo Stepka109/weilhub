@@ -11,6 +11,8 @@ import type {
   Invitation,
   Material,
   MaterialFile,
+  Poll,
+  PollResults,
   Profile,
   SchoolEvent,
   Subject,
@@ -196,4 +198,52 @@ export async function getAuditLogs(limit = 30) {
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as (AuditLog & { actor: { display_name: string } | null })[];
+}
+
+export interface ActivitySummary {
+  people: number;
+  announcements: Record<string, number>;
+  materials: Record<string, number>;
+  polls: Record<string, number>;
+}
+
+/** Kolik lidí přečetlo oznámení, otevřelo materiál a hlasovalo (jen redaktor). */
+export async function getActivitySummary(): Promise<ActivitySummary> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("activity_summary");
+  return (data as ActivitySummary | null) ?? { people: 0, announcements: {}, materials: {}, polls: {} };
+}
+
+export type AdminPoll = Poll & {
+  /** Lze ještě hlasovat (bez data uzavření, nebo před ním) */
+  open: boolean;
+  results: PollResults | null;
+  /** Odpovědi u ankety s krátkou odpovědí (u anonymní bez jmen) */
+  answers: { answer: string; created_at: string; person: string | null }[];
+};
+
+export async function getAdminPolls(): Promise<AdminPoll[]> {
+  const supabase = await createClient();
+  const { data: polls } = await supabase.from("polls").select("*").order("created_at", { ascending: false });
+  const list = (polls ?? []) as Poll[];
+  return Promise.all(
+    list.map(async (p) => {
+      const [results, answers] = await Promise.all([
+        supabase.rpc("poll_results", { p_poll: p.id }),
+        p.kind === "text"
+          ? supabase.from("poll_votes").select("answer, created_at, user:profiles(display_name)").eq("poll_id", p.id).order("created_at")
+          : Promise.resolve({ data: [] }),
+      ]);
+      return {
+        ...p,
+        open: !p.closes_at || Date.parse(p.closes_at) > Date.now(),
+        results: (results.data as PollResults | null) ?? null,
+        answers: ((answers.data ?? []) as unknown as { answer: string; created_at: string; user: { display_name: string } | null }[]).map((a) => ({
+          answer: a.answer,
+          created_at: a.created_at,
+          person: p.anonymous ? null : (a.user?.display_name ?? null),
+        })),
+      };
+    }),
+  );
 }

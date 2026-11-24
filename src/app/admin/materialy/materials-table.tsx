@@ -18,10 +18,22 @@ import { formatDateTime } from "@/lib/dates";
 import { materialType } from "@/components/portal/shared";
 import type { AdminMaterialRow } from "@/lib/data/admin";
 import { GroupBadge } from "@/components/portal/group-badge";
+import { ActivityButton } from "@/components/admin/activity-button";
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function MaterialsTable({ materials, subjects }: { materials: AdminMaterialRow[]; subjects: { id: string; name: string }[] }) {
+export function MaterialsTable({
+  materials,
+  subjects,
+  views,
+  people,
+}: {
+  materials: AdminMaterialRow[];
+  subjects: { id: string; name: string }[];
+  /** Kolik lidí materiál otevřelo (id → počet) a kolik je schválených celkem */
+  views: Record<string, number>;
+  people: number;
+}) {
   const router = useRouter();
   const { run } = useAction();
   const [confirmDialog, ask] = useConfirm();
@@ -109,7 +121,10 @@ export function MaterialsTable({ materials, subjects }: { materials: AdminMateri
                   {formatDateTime(m.updated_at)}
                 </Td>
                 <Td>
-                  <StatusBadge status={m.status} />
+                  <span className="flex flex-col items-start gap-1.5">
+                    <StatusBadge status={m.status} />
+                    {m.status === "published" && <ActivityButton kind="material" id={m.id} count={views[m.id] ?? 0} total={people} />}
+                  </span>
                 </Td>
                 <Td className="md:text-right">
                   <DropdownMenu>

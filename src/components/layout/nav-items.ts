@@ -12,6 +12,7 @@ import {
   Megaphone,
   Settings,
   Users,
+  Vote,
   type LucideIcon,
 } from "lucide-react";
 import type { IconAnimation } from "@/components/icons/animated-icon";
@@ -34,6 +35,7 @@ export const PORTAL_NAV: NavItem[] = [
   { href: "/rozvrh", label: "Rozvrh", icon: CalendarDays, anim: "bounce", prefix: true },
   { href: "/kalendar", label: "Kalendář", icon: CalendarRange, anim: "pop", prefix: true },
   { href: "/oznameni", label: "Oznámení", icon: Bell, anim: "bell", prefix: true },
+  { href: "/hlasovani", label: "Hlasování", icon: Vote, anim: "pop", prefix: true },
   { href: "/odkazy", label: "Důležité odkazy", icon: Link2, anim: "wiggle", prefix: true },
 ];
 
@@ -48,6 +50,7 @@ export const ADMIN_NAV: (NavItem & { adminOnly?: boolean })[] = [
   { href: "/admin/rozvrh", label: "Rozvrh", icon: CalendarDays, anim: "bounce", prefix: true },
   { href: "/admin/akce", label: "Akce a volné dny", icon: CalendarRange, anim: "pop", prefix: true },
   { href: "/admin/oznameni", label: "Oznámení", icon: Megaphone, anim: "wiggle", prefix: true },
+  { href: "/admin/hlasovani", label: "Hlasování", icon: Vote, anim: "pop", prefix: true },
   { href: "/admin/odkazy", label: "Odkazy", icon: Link2, anim: "wiggle", prefix: true },
   { href: "/admin/uzivatele", label: "Uživatelé", icon: Users, anim: "bounce", prefix: true, adminOnly: true },
   { href: "/admin/nastaveni", label: "Nastavení", icon: Settings, anim: "spin", prefix: true, adminOnly: true },

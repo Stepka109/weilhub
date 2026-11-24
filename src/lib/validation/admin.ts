@@ -133,6 +133,35 @@ export const announcementSchema = z
   // Běžné oznámení datum nemá
   .transform((v) => (v.kind === "info" ? { ...v, event_date: null, event_time: null } : v));
 
+export const pollSchema = z
+  .object({
+    question: z.string().trim().min(1, "Zadejte otázku.").max(300),
+    description: z.string().trim().max(2000),
+    kind: z.enum(["single", "multiple", "text"]),
+    // Možnosti po řádcích; prázdné řádky se vynechají
+    options: z
+      .string()
+      .transform((v) => v.split("\n").map((o) => o.trim()).filter(Boolean))
+      .pipe(z.array(z.string().max(200, "Možnost může mít nejvýše 200 znaků.")).max(12, "Nejvýše 12 možností.")),
+    closes_at: z
+      .string()
+      .transform((v) => (v === "" ? null : v))
+      .nullable()
+      .optional(),
+    show_results: z.boolean(),
+    anonymous: z.boolean(),
+    status: publicationStatus,
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind !== "text" && v.options.length < 2) {
+      ctx.addIssue({ code: "custom", message: "Zadejte aspoň dvě možnosti (každou na nový řádek).", path: ["options"] });
+    }
+    if (v.closes_at && Number.isNaN(Date.parse(v.closes_at))) {
+      ctx.addIssue({ code: "custom", message: "Neplatné datum uzavření.", path: ["closes_at"] });
+    }
+  })
+  .transform((v) => ({ ...v, options: v.kind === "text" ? [] : v.options }));
+
 export const linkSchema = z.object({
   title: z.string().trim().min(1, "Zadejte název.").max(120),
   description: optionalText(300),

@@ -2,13 +2,13 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/misc";
-import { getAdminMaterials, getAllSubjects } from "@/lib/data/admin";
+import { getActivitySummary, getAdminMaterials, getAllSubjects } from "@/lib/data/admin";
 import { MaterialsTable } from "./materials-table";
 
 export const metadata = { title: "Materiály" };
 
 export default async function AdminMaterialsPage() {
-  const [materials, subjects] = await Promise.all([getAdminMaterials(), getAllSubjects()]);
+  const [materials, subjects, activity] = await Promise.all([getAdminMaterials(), getAllSubjects(), getActivitySummary()]);
   return (
     <>
       <PageHeader
@@ -22,7 +22,12 @@ export default async function AdminMaterialsPage() {
           </Button>
         }
       />
-      <MaterialsTable materials={materials} subjects={subjects.map((s) => ({ id: s.id, name: s.name }))} />
+      <MaterialsTable
+        materials={materials}
+        subjects={subjects.map((s) => ({ id: s.id, name: s.name }))}
+        views={activity.materials}
+        people={activity.people}
+      />
     </>
   );
 }

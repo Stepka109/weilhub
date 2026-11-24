@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { CalendarPlus, ClipboardCheck, Paperclip } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, PillTabs } from "@/components/ui/misc";
 import { DueBadge, SubjectBadge } from "@/components/portal/shared";
 import { CompletionToggle } from "@/components/portal/toggles";
+import { AssignmentDialog } from "@/components/portal/assignment-dialog";
+import { DueBar } from "@/components/portal/due-bar";
 import { SubjectSelectFilter } from "@/components/portal/subject-select-filter";
 import { requireUser } from "@/lib/auth";
 import { GroupBadge } from "@/components/portal/group-badge";
@@ -95,23 +96,30 @@ export default async function AssignmentsPage({ searchParams }: PageProps<"/ukol
                     <GroupBadge group={a.study_group} className="h-6" />
                     <DueBadge date={a.due_date} completed={a.completed} />
                   </div>
-                  <Link href={`/ukoly/${a.id}`} className="mt-2.5 block">
-                    <h2 className={cn("text-[1.05rem] font-semibold text-ink hover:text-primary", a.completed && "text-muted line-through decoration-1")}>
+                  {/* Kliknutím se otevře zadání v okně */}
+                  <AssignmentDialog assignment={a} className="group mt-2.5">
+                    <h2
+                      className={cn(
+                        "text-[1.05rem] font-semibold text-ink group-hover:text-primary",
+                        a.completed && "text-muted line-through decoration-1",
+                      )}
+                    >
                       {a.title}
                     </h2>
-                  </Link>
-                  {a.instructions && <p className="mt-1 line-clamp-2 text-sm text-muted">{a.instructions}</p>}
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarPlus className="size-4" aria-hidden /> Zadáno {formatDate(a.assigned_on)}
-                    </span>
-                    <span className="font-medium text-ink">Termín: {formatDue(a.due_date, a.due_time)}</span>
-                    {a.files.length > 0 && (
-                      <span className="inline-flex items-center gap-1">
-                        <Paperclip className="size-4" aria-hidden /> {a.files.length}
+                    {a.instructions && <p className="mt-1 line-clamp-2 text-sm text-muted">{a.instructions}</p>}
+                    <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarPlus className="size-4" aria-hidden /> Zadáno {formatDate(a.assigned_on)}
                       </span>
-                    )}
-                  </div>
+                      <span className="font-medium text-ink">Termín: {formatDue(a.due_date, a.due_time)}</span>
+                      {a.files.length > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <Paperclip className="size-4" aria-hidden /> {a.files.length}
+                        </span>
+                      )}
+                    </span>
+                  </AssignmentDialog>
+                  <DueBar assignedOn={a.assigned_on} dueDate={a.due_date} dueTime={a.due_time} completed={a.completed} className="mt-3" />
                 </div>
               </Card>
             </li>

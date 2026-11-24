@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/admin/common";
 import { RowMenu, StatusSelect } from "@/components/admin/row-menu";
+import { ActivityButton } from "@/components/admin/activity-button";
 import { deleteRow, saveAnnouncement, setPinned, setStatus } from "@/lib/actions/admin/content";
 import { useAction } from "@/lib/use-action";
 import { formatDateTime } from "@/lib/dates";
@@ -149,7 +150,18 @@ function AnnouncementDialog({ item, open, onOpenChange }: { item: Announcement |
   );
 }
 
-export function AnnouncementsManager({ items, openNew }: { items: Announcement[]; openNew: boolean }) {
+export function AnnouncementsManager({
+  items,
+  openNew,
+  reads,
+  people,
+}: {
+  items: Announcement[];
+  openNew: boolean;
+  /** Kolik lidí oznámení přečetlo (id → počet) a kolik je schválených celkem */
+  reads: Record<string, number>;
+  people: number;
+}) {
   const { run } = useAction();
   const [confirmDialog, ask] = useConfirm();
   const [dialog, setDialog] = React.useState<{ open: boolean; item: Announcement | null }>({ open: openNew, item: null });
@@ -185,6 +197,7 @@ export function AnnouncementsManager({ items, openNew }: { items: Announcement[]
                       </Badge>
                     )}
                     <span className="text-xs text-muted">{formatDateTime(a.published_at ?? a.created_at)}</span>
+                    {a.status === "published" && <ActivityButton kind="announcement" id={a.id} count={reads[a.id] ?? 0} total={people} />}
                   </div>
                   <button type="button" onClick={() => setDialog({ open: true, item: a })} className="mt-2 block text-left font-semibold text-ink hover:text-primary">
                     {a.title}

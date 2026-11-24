@@ -155,3 +155,22 @@ export async function deleteWidgetToken(): Promise<ActionResult> {
   revalidatePath("/nastaveni");
   return { ok: true, message: "Widget byl zrušen." };
 }
+
+/** Hlas v anketě (lze změnit, dokud je anketa otevřená). Pravidla hlídá databáze. */
+export async function votePoll(pollId: string, choices: number[], answer: string): Promise<ActionResult> {
+  const auth = await getActionUser();
+  if ("error" in auth) return { ok: false, error: auth.error };
+  if (!uuid.safeParse(pollId).success) return { ok: false, error: "Neplatné hlasování." };
+  const parsed = z
+    .object({ choices: z.array(z.number().int().min(0).max(11)).max(12), answer: z.string().max(1000) })
+    .safeParse({ choices, answer });
+  if (!parsed.success) return { ok: false, error: "Neplatný hlas." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("poll_votes")
+    .upsert({ poll_id: pollId, user_id: auth.user.id, ...parsed.data }, { onConflict: "poll_id,user_id" });
+  // Chyby z kontroly hlasu (P0001) mají srozumitelný český text
+  if (error) return { ok: false, error: error.code === "P0001" ? error.message : "Hlas se nepodařilo uložit." };
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Hlas byl uložen." };
+}

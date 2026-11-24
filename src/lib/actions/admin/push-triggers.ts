@@ -10,7 +10,7 @@ import { cycleWeekFor } from "@/lib/timetable";
  * nebo rovnou publikovaný nový záznam). Úpravy už zveřejněného obsahu
  * upozornění neposílají, aby studenty nezahlcovaly.
  */
-export type PushTable = "exams" | "assignments" | "materials" | "announcements";
+export type PushTable = "exams" | "assignments" | "materials" | "announcements" | "polls";
 
 /** Stav záznamu před uložením (null = nový záznam). */
 export async function statusBefore(supabase: SupabaseClient, table: PushTable | "events", id: string | null) {
@@ -51,6 +51,10 @@ export function notifyPublished(supabase: SupabaseClient, table: PushTable, id: 
       if (!m) return;
       const subject = (m.subject as unknown as { name: string } | null)?.name ?? "Materiál";
       await notify(supabase, "materials", { title: `Nový materiál: ${subject}`, body: m.title, url: `/materialy/${id}`, tag: `material-${id}` }, group(m.study_group));
+    } else if (table === "polls") {
+      const { data: p } = await supabase.from("polls").select("question").eq("id", id).maybeSingle();
+      if (!p) return;
+      await notify(supabase, "announcements", { title: "Nové hlasování", body: p.question, url: "/hlasovani", tag: `anketa-${id}` });
     } else {
       const { data: n } = await supabase.from("announcements").select("title, body, kind, event_date, event_time").eq("id", id).maybeSingle();
       if (!n) return;

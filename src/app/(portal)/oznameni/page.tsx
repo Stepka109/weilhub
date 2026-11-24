@@ -2,9 +2,9 @@ import { CalendarDays, Megaphone, Pin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
-import { MarkReadButton } from "@/components/portal/mark-read";
 import { NOTICE_KIND, NoticeDateTile, isDated, noticeRelative, noticeWhen } from "@/components/portal/notice-meta";
 import { requireUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { getAnnouncements, getReadAnnouncementIds } from "@/lib/data/portal";
 import { formatDateTime, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,18 @@ export default async function AnnouncementsPage() {
   const user = await requireUser();
   const [items, read] = await Promise.all([getAnnouncements(), getReadAnnouncementIds(user.id)]);
   const unread = items.filter((a) => !read.has(a.id)).map((a) => a.id);
+  // Otevřením stránky se oznámení počítají jako přečtená (přehled aktivity);
+  // značka „Nové“ zůstane vidět do příští návštěvy
+  if (unread.length) {
+    const supabase = await createClient();
+    await supabase
+      .from("announcement_reads")
+      .upsert(unread.map((id) => ({ user_id: user.id, announcement_id: id })), { onConflict: "user_id,announcement_id", ignoreDuplicates: true })
+      .then(
+        () => undefined,
+        () => undefined,
+      );
+  }
   const today = todayIso();
 
   // Nahoře nadcházející události a termíny (podle data), pod nimi ostatní oznámení
@@ -28,8 +40,7 @@ export default async function AnnouncementsPage() {
     <>
       <PageHeader
         title="Oznámení"
-        description={unread.length ? `Máš ${unread.length} nepřečtených oznámení.` : "Všechna oznámení máš přečtená."}
-        actions={<MarkReadButton ids={unread} />}
+        description={unread.length ? `Nová oznámení od minula: ${unread.length}.` : "Žádná nová oznámení od minula."}
       />
 
       {upcoming.length > 0 && (
@@ -111,11 +122,6 @@ function NoticeCard({ a, unread }: { a: Announcement; unread: boolean }) {
           </div>
           <h3 className="mt-3 text-lg font-semibold text-ink">{a.title}</h3>
           {a.body && <p className="mt-2 leading-relaxed whitespace-pre-line text-slate-ink">{a.body}</p>}
-          {unread && (
-            <div className="mt-4 -ml-2">
-              <MarkReadButton ids={[a.id]} label="Označit jako přečtené" small />
-            </div>
-          )}
         </div>
       </div>
     </Card>

@@ -10,6 +10,7 @@ import { RichText } from "@/components/portal/rich-text";
 import { MaterialRow, SubjectBadge, materialType } from "@/components/portal/shared";
 import { FavoriteButton } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { GroupBadge } from "@/components/portal/group-badge";
 import { getFavoriteIds, getMaterial, getMaterials } from "@/lib/data/portal";
 import { formatDate, formatTimestampDate } from "@/lib/dates";
@@ -29,6 +30,7 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
   const [user, material] = await Promise.all([requireUser(), getMaterial(id)]);
   if (!material) notFound();
 
+  const supabase = await createClient();
   const [favorites, related] = await Promise.all([
     getFavoriteIds(user.id),
     getMaterials({
@@ -38,6 +40,11 @@ export default async function MaterialDetailPage({ params }: PageProps<"/materia
       group: user.profile.preferences?.studyGroup ?? null,
     }),
   ]);
+  // Přehled aktivity: kdo materiál otevřel (chyba zápisu nesmí zablokovat stránku)
+  await supabase.rpc("record_material_view", { p_material: material.id }).then(
+    () => undefined,
+    () => undefined,
+  );
   const type = materialType(material);
   const main = material.files.find((f) => f.role === "main");
   const attachments = material.files.filter((f) => f.role === "attachment");

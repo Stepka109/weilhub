@@ -12,6 +12,8 @@ import type {
   Exam,
   Material,
   MaterialFile,
+  Poll,
+  PollResults,
   SchoolEvent,
   Subject,
   SubjectRef,
@@ -127,7 +129,7 @@ export async function getFavoriteIds(userId: string): Promise<Set<string>> {
 }
 
 export type AssignmentListItem = WithSubject<Assignment> & {
-  files: Pick<AssignmentFile, "id" | "file_name">[];
+  files: Pick<AssignmentFile, "id" | "file_name" | "size_bytes">[];
   completed: boolean;
 };
 
@@ -138,7 +140,7 @@ export async function getAssignments(
   const supabase = await createClient();
   let q = supabase
     .from("assignments")
-    .select(`*, ${SUBJECT_REF}, files:assignment_files(id, file_name)`)
+    .select(`*, ${SUBJECT_REF}, files:assignment_files(id, file_name, size_bytes)`)
     .eq("status", "published")
     .order("due_date", { ascending: true })
     .order("due_time", { ascending: true, nullsFirst: false });
@@ -415,4 +417,32 @@ function lessonEvents(
     });
   }
   return items;
+}
+
+export type PollView = Poll & {
+  myVote: { choices: number[]; answer: string } | null;
+  results: PollResults | null;
+  open: boolean;
+};
+
+/** Zveřejněná hlasování s vlastním hlasem a výsledky (pokud je smí vidět). */
+export async function getPolls(userId: string, opts: { onlyOpen?: boolean } = {}): Promise<PollView[]> {
+  const supabase = await createClient();
+  const [{ data: polls }, { data: votes }] = await Promise.all([
+    supabase.from("polls").select("*").eq("status", "published").order("published_at", { ascending: false }),
+    supabase.from("poll_votes").select("poll_id, choices, answer").eq("user_id", userId),
+  ]);
+  const now = Date.now();
+  const list = ((polls ?? []) as Poll[])
+    .map((p) => ({ ...p, open: !p.closes_at || Date.parse(p.closes_at) > now }))
+    .filter((p) => !opts.onlyOpen || p.open);
+  const results = await Promise.all(list.map((p) => supabase.rpc("poll_results", { p_poll: p.id })));
+  return list.map((p, i) => {
+    const v = (votes ?? []).find((x) => x.poll_id === p.id);
+    return {
+      ...p,
+      myVote: v ? { choices: v.choices as number[], answer: v.answer as string } : null,
+      results: (results[i].data as PollResults | null) ?? null,
+    };
+  });
 }

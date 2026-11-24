@@ -5,6 +5,7 @@ import { slugify } from "@/lib/utils";
 import {
   announcementSchema,
   eventSchema,
+  pollSchema,
   examSchema,
   linkSchema,
   publicationStatus,
@@ -174,7 +175,7 @@ export async function saveExam(id: string | null, input: Input<typeof examSchema
 
 /* ------------------------------------------------- Obecné: stav a mazání */
 
-const STATUS_TABLES = ["materials", "assignments", "exams", "events", "announcements"] as const;
+const STATUS_TABLES = ["materials", "assignments", "exams", "events", "announcements", "polls"] as const;
 type StatusTable = (typeof STATUS_TABLES)[number];
 
 export async function setStatus(table: StatusTable, id: string, status: z.infer<typeof publicationStatus>): Promise<ActionResult> {
@@ -192,7 +193,7 @@ export async function setStatus(table: StatusTable, id: string, status: z.infer<
   });
 }
 
-const DELETE_TABLES = ["exams", "events", "announcements", "useful_links"] as const;
+const DELETE_TABLES = ["exams", "events", "announcements", "useful_links", "polls"] as const;
 
 export async function deleteRow(table: (typeof DELETE_TABLES)[number], id: string): Promise<ActionResult> {
   return withRole("staff", async ({ supabase }) => {
@@ -206,6 +207,26 @@ export async function deleteRow(table: (typeof DELETE_TABLES)[number], id: strin
 }
 
 /* -------------------------------------------------------------------- Akce */
+
+/* --------------------------------------------------------------- Hlasování */
+
+export async function savePoll(id: string | null, input: Input<typeof pollSchema>): Promise<ActionResult<{ id: string }>> {
+  return withRole("staff", async ({ supabase }) => {
+    const parsed = pollSchema.safeParse(input);
+    if (!parsed.success) return invalid(parsed.error);
+    if (id && !idSchema.safeParse(id).success) return { ok: false, error: "Neplatné hlasování." };
+    const before = await statusBefore(supabase, "polls", id);
+    // Datum uzavření přichází z formuláře v místním čase prohlížeče jako ISO
+    const q = id
+      ? supabase.from("polls").update(parsed.data).eq("id", id).select("id").single()
+      : supabase.from("polls").insert(parsed.data).select("id").single();
+    const { data, error } = await q;
+    if (error) return { ok: false, error: dbErrorMessage(error) };
+    notifyPublished(supabase, "polls", data.id, before, parsed.data.status);
+    revalidateAll();
+    return { ok: true, data: { id: data.id }, message: "Hlasování bylo uloženo." };
+  });
+}
 
 export async function saveEvent(id: string | null, input: Input<typeof eventSchema>): Promise<ActionResult<{ id: string }>> {
   return withRole("staff", async ({ supabase }) => {

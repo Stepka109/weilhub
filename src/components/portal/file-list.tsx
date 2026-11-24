@@ -4,7 +4,7 @@ import { formatBytes } from "@/lib/utils";
 import type { StoredFile } from "@/lib/types";
 
 /** Seznam příloh s možností stažení (a zobrazení u bezpečných typů). */
-export function FileList({ files, title = "Přílohy" }: { files: StoredFile[]; title?: string }) {
+export function FileList({ files, title = "Přílohy" }: { files: Pick<StoredFile, "id" | "file_name" | "size_bytes">[]; title?: string }) {
   if (!files.length) return null;
   return (
     <div>

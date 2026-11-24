@@ -17,10 +17,16 @@ import { DueBadge, MaterialRow, SubjectBadge, SubjectIcon } from "@/components/p
 import { CompletionToggle } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
 import { GroupBadge } from "@/components/portal/group-badge";
-import { getAnnouncements, getUpcomingEvents, getAssignments, getExams, getMaterials, getSettings } from "@/lib/data/portal";
-import { dueInfo, formatDate, formatDue, formatTime, greetingDate, shiftDate, todayIso } from "@/lib/dates";
+import { getAnnouncements, getPolls, getUpcomingEvents, getAssignments, getExams, getMaterials, getSettings } from "@/lib/data/portal";
+import { dueInfo, formatDate, formatDue, formatTime, greetingDate, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { NOTICE_KIND, NoticeDateTile, noticeRelative, noticeWhen } from "@/components/portal/notice-meta";
+import { AssignmentDialog } from "@/components/portal/assignment-dialog";
+import { DueBar } from "@/components/portal/due-bar";
+import { LessonCountdown } from "@/components/portal/lesson-countdown";
+import { getTimetableWeek } from "@/lib/data/timetable";
+import { dayLessons } from "@/lib/widget";
+import { PollCard } from "@/components/portal/poll-card";
 
 export const metadata = { title: "Domů" };
 
@@ -35,7 +41,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const today = todayIso();
   const group = user.profile.preferences?.studyGroup ?? null;
-  const [assignments, exams, materials, announcements, settings, upcoming] = await Promise.all([
+  const [assignments, exams, materials, announcements, settings, upcoming, timetable, polls] = await Promise.all([
     // Nesplněné úkoly včetně těch po termínu (za poslední 2 týdny)
     getAssignments(user.id, { from: shiftDate(today, -14), onlyOpen: true, limit: 6, group }),
     getExams({ upcoming: true, limit: 5, group }),
@@ -44,11 +50,20 @@ export default async function DashboardPage() {
     getSettings(),
     // Události a termíny z oznámení na nejbližší dva týdny
     getUpcomingEvents({ days: 14, limit: 3 }),
+    // Dnešní hodiny pro odpočet
+    getTimetableWeek(schoolWeek(today)[0], { group: group ?? "both" }).catch(() => null),
+    // Otevřená hlasování, ve kterých student ještě nehlasoval – na nástěnce jako důležité
+    getPolls(user.id, { onlyOpen: true }).catch(() => []),
   ]);
+  const pendingPolls = polls.filter((p) => !p.myVote);
+  const todayRow = timetable?.week.days.find((d) => d.date === today);
+  const todayLessons = timetable && todayRow ? dayLessons(todayRow, timetable.week) : [];
   const upcomingIds = new Set(upcoming.map((a) => a.id));
   const pinned = announcements.filter((a) => a.pinned);
   const firstName = user.profile.display_name.split(" ")[0];
   const nextExam = exams[0];
+  // Nejbližší úkol: první nesplněný, který ještě není po termínu
+  const nextTask = assignments.find((a) => a.due_date >= today) ?? null;
   const nextInfo = nextExam ? dueInfo(nextExam.exam_date, today) : null;
 
   return (
@@ -64,11 +79,13 @@ export default async function DashboardPage() {
                 Třída {settings.class_label} · školní rok {settings.school_year}
               </p>
             )}
+            <LessonCountdown date={today} lessons={todayLessons} />
           </div>
 
+          <div className="flex w-full flex-col gap-3 lg:w-[400px]">
           <Link
             href={nextExam ? `/testy#test-${nextExam.id}` : "/testy"}
-            className="group flex w-full items-center gap-4 rounded-2xl border border-line bg-bg p-4 transition-colors hover:border-rose-ink/30 lg:w-[400px]"
+            className="group flex w-full items-center gap-4 rounded-2xl border border-line bg-bg p-4 transition-colors hover:border-rose-ink/30"
           >
             {nextExam && nextInfo ? (
               <>
@@ -102,8 +119,29 @@ export default async function DashboardPage() {
             )}
             <ArrowRight className="size-5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
+          {nextTask && (
+            <AssignmentDialog
+              assignment={nextTask}
+              className="group rounded-2xl border border-line bg-bg p-4 transition-colors hover:border-mint-ink/30"
+            >
+              <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-mint-ink uppercase">
+                <ClipboardCheck className="size-3.5" aria-hidden /> Nejbližší úkol
+              </span>
+              <span className="mt-1 block truncate font-display text-lg font-bold text-ink group-hover:text-primary">{nextTask.title}</span>
+              <span className="block truncate text-sm text-muted">
+                {nextTask.subject.name} · odevzdat {formatDue(nextTask.due_date, nextTask.due_time)}
+              </span>
+              <DueBar assignedOn={nextTask.assigned_on} dueDate={nextTask.due_date} dueTime={nextTask.due_time} className="mt-2.5" />
+            </AssignmentDialog>
+          )}
+          </div>
         </div>
       </section>
+
+      {/* Hlasování, ve kterých ještě nehlasoval */}
+      {pendingPolls.map((p) => (
+        <PollCard key={p.id} poll={p} highlight />
+      ))}
 
       {/* Připnutá oznámení */}
       {pinned.map((a) => (
@@ -228,13 +266,13 @@ export default async function DashboardPage() {
                 {assignments.map((a) => (
                   <li key={a.id} className="flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-bg sm:px-3">
                     <CompletionToggle assignmentId={a.id} completed={a.completed} title={a.title} />
-                    <Link href={`/ukoly/${a.id}`} className="min-w-0 flex-1">
-                      <span className="line-clamp-2 block font-medium text-ink hover:text-primary sm:truncate">{a.title}</span>
+                    <AssignmentDialog assignment={a} className="group min-w-0 flex-1">
+                      <span className="line-clamp-2 block font-medium text-ink group-hover:text-primary sm:truncate">{a.title}</span>
                       <span className="block truncate text-sm text-muted">
                         {a.subject.name}
                         {a.study_group ? ` (${a.study_group})` : ""} · {formatDue(a.due_date, a.due_time)}
                       </span>
-                    </Link>
+                    </AssignmentDialog>
                     <DueBadge date={a.due_date} />
                   </li>
                 ))}
