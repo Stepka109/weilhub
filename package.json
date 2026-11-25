@@ -12,7 +12,8 @@
     "test:db": "vitest run tests/db",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "playwright test",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "android:apk": "node scripts/build-android.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

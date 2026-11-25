@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WeilHub</string>
+    <string name="widget_list">Rozvrh</string>
+    <string name="widget_small">Teď a další</string>
+    <string name="widget_list_desc">Rozvrh dne se změnami</string>
+    <string name="widget_small_desc">Probíhající hodina s odpočtem</string>
+    <string name="widget_loading">Načítám…</string>
+</resources>

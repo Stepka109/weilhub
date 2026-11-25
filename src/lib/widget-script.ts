@@ -10,9 +10,12 @@ const API = "__URL__/api/widget";
 const OPEN = "__URL__/rozvrh";
 const KEY = "__KEY__";
 
+// Barvy Weilovky (navy, tyrkysová, limetková); karty hodin mají barvy rozvrhu
 const COL = {
-  bg: "#ffffff", text: "#14213d", muted: "#667085", cell: "#eef4fb", cellBorder: "#cdd9e8",
-  red: "#db2d2d", green: "#4f9a12", purple: "#7c4ddc", orange: "#ff8a00", nowBg: "#fff7ee",
+  bg: "#ffffff", page: "#f4f7f8", text: "#162b4f", muted: "#5b6676", navy: "#1b3a6b",
+  teal: "#0a7c83", tealSoft: "#dbf2f1", lime: "#8dc63f", cyan: "#1fc2ca", line: "#e0e8ec",
+  cell: "#eef4fb", cellBorder: "#cdd9e8",
+  red: "#db2d2d", green: "#4f9a12", purple: "#7c4ddc", orange: "#ff8a00", orangeSoft: "#ffe6cc", nowBg: "#fff7ee",
   S1: "#0b7d73", S1bg: "#e2f5f2", S2: "#4b3fd1", S2bg: "#ebe8ff"
 };
 const col = (k) => new Color(COL[k]);
@@ -110,6 +113,46 @@ function dashedRect(ctx, rect, r, color, lw) {
   }
 }
 
+// Logo WeilHub: „W“ z listů otevřené knihy (stejné jako na webu, mřížka 40 × 40)
+function drawLogo(ctx, x, y, size) {
+  const k = size / 40;
+  const P = (px, py) => new Point(x + px * k, y + py * k);
+  roundRect(ctx, new Rect(x, y, size, size), 12 * k, col("navy"), null, 0);
+  const book = new Path();
+  book.move(P(8, 11.5));
+  book.addCurve(P(17.6, 14.1), P(11.6, 10.9), P(14.9, 11.9));
+  book.addLine(P(20, 16));
+  book.addLine(P(22.4, 14.1));
+  book.addCurve(P(32, 11.5), P(25.1, 11.9), P(28.4, 10.9));
+  ctx.addPath(book);
+  ctx.setStrokeColor(col("lime"));
+  ctx.setLineWidth(2.2 * k);
+  ctx.strokePath();
+  const w = new Path();
+  w.addLines([P(9, 15.5), P(14, 29), P(20, 18.5), P(26, 29), P(31, 15.5)]);
+  ctx.addPath(w);
+  ctx.setStrokeColor(col("cyan"));
+  ctx.setLineWidth(3.4 * k);
+  ctx.strokePath();
+}
+
+function logoImage(size) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(size, size);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  drawLogo(ctx, 0, 0, size);
+  return ctx.getImage();
+}
+
+// Pilulka s textem zarovnaná doprava k bodu „right“; vrací její levý okraj
+function pill(ctx, str, right, y, fg, bg) {
+  const w = str.length * 6.2 + 14;
+  roundRect(ctx, new Rect(right - w, y, w, 18), 9, bg, null, 0);
+  text(ctx, str, right - w, y + 2, w, 14, Font.boldSystemFont(10.5), fg, "center");
+  return right - w;
+}
+
 function text(ctx, str, x, y, w, h, font, color, align) {
   if (!str || w <= 4) return;
   ctx.setFont(font);
@@ -121,6 +164,17 @@ function text(ctx, str, x, y, w, h, font, color, align) {
 }
 
 function drawRow(ctx, l, x, y, w, h, isNow) {
+  drawRowBody(ctx, l, x, y, w, h, isNow);
+  // Probíhající hodina: tenký oranžový pruh, kolik už uplynulo
+  if (isNow) {
+    const cx = x + 38, cw = w - 38;
+    const done = Math.max(0, Math.min(1, (nowMin - mins(l.start)) / Math.max(1, mins(l.end) - mins(l.start))));
+    roundRect(ctx, new Rect(cx + 10, y + h - 5, cw - 20, 2.5), 1.25, col("orangeSoft"), null, 0);
+    if (done > 0) roundRect(ctx, new Rect(cx + 10, y + h - 5, Math.max(2.5, (cw - 20) * done), 2.5), 1.25, col("orange"), null, 0);
+  }
+}
+
+function drawRowBody(ctx, l, x, y, w, h, isNow) {
   const mid = y + h / 2;
   const numColor = isNow ? col("orange") : col("text");
   text(ctx, num(l), x, mid - 15, 34, 16, Font.boldSystemFont(13), numColor, "center");
@@ -174,11 +228,29 @@ function drawList(data, family) {
   ctx.fillRect(new Rect(0, 0, size.width, size.height));
 
   const p = 12;
-  const head = (day.relative === "Dnes" || day.relative === "Zítra" ? day.relative + " · " : "") + day.label;
-  text(ctx, head, p + 2, p - 2, size.width - 120, 20, Font.boldSystemFont(15), col("text"), "left");
-  const info = "týden " + day.cycleWeek + (day.group ? " · " + day.group : "") + (data.offline ? " · offline" : "");
-  text(ctx, info, size.width - 130, p, 116, 16, Font.systemFont(11), col("muted"), "right");
-  let y = p + 26;
+  // Hlavička: logo, den a vpravo pilulky (skupina, týden, offline)
+  drawLogo(ctx, p, p - 1, 22);
+  let right = size.width - p;
+  if (data.offline) right = pill(ctx, "offline", right, p, col("muted"), col("page")) - 4;
+  if (day.group) right = pill(ctx, day.group, right, p, col(day.group), col(day.group + "bg")) - 4;
+  right = pill(ctx, "týden " + day.cycleWeek, right, p, col("teal"), col("tealSoft")) - 6;
+  const rel = day.relative === "Dnes" || day.relative === "Zítra" ? day.relative : "";
+  const tx = p + 30;
+  if (rel) {
+    text(ctx, rel.toUpperCase(), tx, p - 2, right - tx, 13, Font.boldSystemFont(9.5), col("teal"), "left");
+    text(ctx, day.label, tx, p + 9, right - tx, 17, Font.boldSystemFont(14), col("navy"), "left");
+  } else {
+    text(ctx, day.label, tx, p + 2, right - tx, 18, Font.boldSystemFont(15), col("navy"), "left");
+  }
+  // Proužek v barvách Weilovky pod hlavičkou
+  const sy = p + 28, third = (size.width - 2 * p) / 3;
+  ctx.setFillColor(col("lime"));
+  ctx.fillRect(new Rect(p, sy, third, 2));
+  ctx.setFillColor(col("teal"));
+  ctx.fillRect(new Rect(p + third, sy, third, 2));
+  ctx.setFillColor(col("cyan"));
+  ctx.fillRect(new Rect(p + 2 * third, sy, third, 2));
+  let y = sy + 8;
 
   if (day.dayOverride) {
     const isEvent = day.dayOverride.kind === "event";
@@ -208,7 +280,7 @@ function drawList(data, family) {
     drawRow(ctx, l, p, y, size.width - 2 * p, rowH, isNow);
     y += rowH + gap;
   }
-  if (more) text("+ " + more + " další", p, y + 4, size.width - 2 * p, 16, Font.systemFont(11), col("muted"), "center");
+  if (more) text(ctx, "+ " + more + " další", p, y + 4, size.width - 2 * p, 16, Font.systemFont(11), col("muted"), "center");
   return ctx.getImage();
 }
 
@@ -267,6 +339,105 @@ function lockCircular(w, data) {
   b.centerAlignText();
 }
 
+// ------------------------------------------------------- malý widget
+// Probíhající nebo další hodina velkým písmem, učebna a odpočet, který
+// iOS počítá sám (aktuální i mezi obnovami widgetu).
+function smallWidget(w, data) {
+  const day = data.day;
+  const st = stateOf(day);
+  w.setPadding(14, 14, 12, 14);
+  w.backgroundColor = col("bg");
+
+  const head = w.addStack();
+  head.centerAlignContent();
+  const logo = head.addImage(logoImage(20));
+  logo.imageSize = new Size(20, 20);
+  head.addSpacer(7);
+
+  const label = (str, color) => {
+    const t = head.addText(str.toUpperCase());
+    t.font = Font.boldSystemFont(10.5);
+    t.textColor = color || col("teal");
+    t.lineLimit = 1;
+    t.minimumScaleFactor = 0.7;
+  };
+  const add = (str, font, color, lines) => {
+    const t = w.addText(str);
+    t.font = font;
+    t.textColor = color;
+    t.lineLimit = lines || 1;
+    t.minimumScaleFactor = 0.6;
+    return t;
+  };
+
+  if (day.dayOverride) {
+    const isEvent = day.dayOverride.kind === "event";
+    label(day.relative + " · " + (isEvent ? "akce" : "volno"), isEvent ? col("green") : col("purple"));
+    w.addSpacer();
+    add(day.dayOverride.title, Font.boldSystemFont(18), col("navy"), 3);
+    if (day.dayOverride.room) add(day.dayOverride.room, Font.semiboldSystemFont(13), col("teal"));
+    return;
+  }
+
+  const { pick, next } = pickLessons(day, st);
+  if (!pick) {
+    label("Dnes");
+    w.addSpacer();
+    add("Dnes už žádná hodina", Font.boldSystemFont(16), col("navy"), 2);
+    return;
+  }
+  const isNow = st.current.length > 0;
+  label((isNow ? "Teď · " : st.isToday ? "Další · " : day.relative + " · ") + num(pick) + " hodina", isNow ? col("orange") : col("teal"));
+  w.addSpacer(8);
+
+  const cancelled = pick.status === "cancelled";
+  add(cancelled ? pick.code || "Hodina" : title(pick), Font.heavySystemFont(30), cancelled ? col("red") : col("navy"));
+  if (cancelled) add("odpadá", Font.boldSystemFont(14), col("red"));
+  else {
+    add(pick.room || " ", Font.boldSystemFont(15), pick.status === "roomchanged" ? col("red") : col("teal"));
+    const s = sub(pick);
+    if (s) add(s, Font.systemFont(12), col("muted"));
+  }
+  w.addSpacer();
+
+  // Odpočet: do konce probíhající hodiny, nebo do začátku další
+  const base = new Date(now.getTime());
+  base.setHours(0, 0, 0, 0);
+  const at = (t) => new Date(base.getTime() + mins(t) * 60000);
+  if (isNow) {
+    const done = Math.max(0, Math.min(1, (nowMin - mins(pick.start)) / Math.max(1, mins(pick.end) - mins(pick.start))));
+    const bar = new DrawContext();
+    bar.size = new Size(130, 5);
+    bar.opaque = false;
+    bar.respectScreenScale = true;
+    roundRect(bar, new Rect(0, 0, 130, 5), 2.5, col("orangeSoft"), null, 0);
+    roundRect(bar, new Rect(0, 0, Math.max(5, 130 * done), 5), 2.5, col("orange"), null, 0);
+    const img = w.addImage(bar.getImage());
+    img.imageSize = new Size(130, 5);
+    w.addSpacer(5);
+  }
+  const row = w.addStack();
+  row.centerAlignContent();
+  if (st.isToday) {
+    const pre = row.addText(isNow ? "konec za " : "začíná za ");
+    pre.font = Font.systemFont(12);
+    pre.textColor = col("muted");
+    const d = row.addDate(at(isNow ? pick.end : pick.start));
+    d.applyTimerStyle();
+    d.font = Font.boldSystemFont(12);
+    d.textColor = isNow ? col("orange") : col("teal");
+    d.lineLimit = 1;
+  } else {
+    const t = row.addText("začíná v " + pick.start);
+    t.font = Font.systemFont(12);
+    t.textColor = col("muted");
+  }
+  if (isNow && next) {
+    w.addSpacer(2);
+    add("Pak " + num(next) + " " + title(next) + (next.room ? " " + next.room : ""), Font.systemFont(11), col("muted"));
+  }
+}
+
 // ---------------------------------------------------------------- widget
 function nextRefresh(day) {
   const st = stateOf(day);
@@ -283,7 +454,16 @@ function nextRefresh(day) {
 }
 
 const data = await load();
-const family = config.widgetFamily || "large";
+let family = config.widgetFamily;
+if (!family) {
+  // Náhled v aplikaci: zeptat se, jakou velikost ukázat
+  const a = new Alert();
+  a.title = "Náhled widgetu";
+  a.addAction("Velký");
+  a.addAction("Střední");
+  a.addAction("Malý");
+  family = ["large", "medium", "small"][Math.max(0, await a.presentSheet())];
+}
 const w = new ListWidget();
 w.url = OPEN;
 w.setPadding(0, 0, 0, 0);
@@ -291,7 +471,14 @@ w.setPadding(0, 0, 0, 0);
 if (data.error || !data.day) {
   w.setPadding(12, 12, 12, 12);
   w.backgroundColor = col("bg");
-  line(w, "WeilHub", Font.boldSystemFont(14)).textColor = col("text");
+  const top = w.addStack();
+  top.centerAlignContent();
+  top.addImage(logoImage(20)).imageSize = new Size(20, 20);
+  top.addSpacer(6);
+  const name = top.addText("WeilHub");
+  name.font = Font.boldSystemFont(14);
+  name.textColor = col("navy");
+  w.addSpacer(6);
   const msg = line(w, data.error || "V nejbližších dnech není výuka.", Font.systemFont(12));
   msg.textColor = col("muted");
   msg.lineLimit = 4;
@@ -303,9 +490,7 @@ if (data.error || !data.day) {
 } else if (family === "accessoryCircular") {
   lockCircular(w, data);
 } else if (family === "small") {
-  w.setPadding(12, 12, 12, 12);
-  w.backgroundColor = col("bg");
-  lockRect(w, data);
+  smallWidget(w, data);
 } else {
   w.backgroundImage = drawList(data, family === "extraLarge" ? "large" : family);
   w.addSpacer();
@@ -313,6 +498,8 @@ if (data.error || !data.day) {
 if (data.day) w.refreshAfterDate = nextRefresh(data.day);
 
 if (config.runsInWidget) Script.setWidget(w);
+else if (family === "small") await w.presentSmall();
+else if (family === "medium") await w.presentMedium();
 else await w.presentLarge();
 Script.complete();
 `;

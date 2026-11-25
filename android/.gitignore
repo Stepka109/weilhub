@@ -1,0 +1,7 @@
+.gradle/
+build/
+local.properties
+# Podpisový klíč aplikace – NIKDY necommitovat, zálohovat zvlášť
+keystore.properties
+*.jks
+*.keystore
