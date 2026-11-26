@@ -21,33 +21,23 @@ function Allergens({ dish }: { dish: Dish }) {
   );
 }
 
-/** Jídla jednoho dne: polévka, obědy a případně snídaně. */
+/** Obědy jednoho dne: polévka a jídla na výběr. */
 export function CanteenDishes({ day, compact = false }: { day: CanteenDay; compact?: boolean }) {
-  const main = day.dishes.filter((d) => d.kind !== "breakfast");
-  const breakfast = day.dishes.filter((d) => d.kind === "breakfast");
   return (
-    <div className="space-y-3">
-      <ul className={cn("grid gap-3", !compact && "md:grid-cols-3")}>
-        {main.map((d, i) => (
-          <li key={i} className={cn("rounded-2xl px-4 py-3", d.kind === "soup" ? "bg-orange/70" : "bg-bg")}>
-            <span className={cn("flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase", d.kind === "soup" ? "text-orange-ink" : "text-primary")}>
-              {d.kind === "soup" ? <Soup className="size-3.5" aria-hidden /> : <UtensilsCrossed className="size-3.5" aria-hidden />}
-              {d.label}
-            </span>
-            <span className="mt-1 block text-[0.95rem] leading-snug font-medium text-ink">
-              {d.name}
-              <Allergens dish={d} />
-            </span>
-          </li>
-        ))}
-      </ul>
-      {breakfast.map((d, i) => (
-        <p key={i} className="px-1 text-sm text-slate-ink">
-          <span className="font-semibold text-ink">{d.label}:</span> {d.name}
-          <Allergens dish={d} />
-        </p>
+    <ul className={cn("grid gap-3", !compact && "md:grid-cols-3")}>
+      {day.dishes.map((d, i) => (
+        <li key={i} className={cn("rounded-2xl px-4 py-3", d.kind === "soup" ? "bg-orange/70" : "bg-bg")}>
+          <span className={cn("flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase", d.kind === "soup" ? "text-orange-ink" : "text-primary")}>
+            {d.kind === "soup" ? <Soup className="size-3.5" aria-hidden /> : <UtensilsCrossed className="size-3.5" aria-hidden />}
+            {d.label}
+          </span>
+          <span className="mt-1 block text-[0.95rem] leading-snug font-medium text-ink">
+            {d.name}
+            <Allergens dish={d} />
+          </span>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 

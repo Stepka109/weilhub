@@ -58,13 +58,12 @@ describe("jídelníček ze Strava.cz", () => {
     },
   };
 
-  it("seřadí dny a jídla (polévka, obědy, snídaně)", () => {
+  it("seřadí dny a jídla (polévka, obědy), snídaně vynechá", () => {
     const menu = parseMenu(raw);
     expect(menu.map((d) => d.date)).toEqual(["2026-11-26", "2026-11-27"]);
     expect(menu[0].dishes.map((d) => [d.kind, d.label, d.name])).toEqual([
       ["soup", "Polévka", "Žampionový krém"],
       ["main", "Oběd 1", "Vepřové nudličky"],
-      ["breakfast", "Snídaně", "Ořechový pletenec"],
     ]);
     expect(menu[0].dishes[1].allergens).toEqual([{ code: "03", name: "Vejce" }]);
     expect(parseMenu({ state: "error" })).toEqual([]);

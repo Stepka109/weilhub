@@ -44,7 +44,7 @@ function isoDate(v: string): string | null {
   return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : null;
 }
 
-/** Odpověď /api/jidelnickyPage → dny s jídly (seřazené). Čistá funkce kvůli testům. */
+/** Odpověď /api/jidelnickyPage → dny s obědy (seřazené, bez snídaní). Čistá funkce kvůli testům. */
 export function parseMenu(json: unknown): CanteenDay[] {
   const meals = (json as { meals?: unknown })?.meals;
   if (!meals || typeof meals !== "object") return [];
@@ -57,12 +57,14 @@ export function parseMenu(json: unknown): CanteenDay[] {
       if (!date || !name) continue;
       const course = str(raw.druh_chod).toLowerCase();
       const kind: DishKind = str(raw.polevka) === "A" ? "soup" : course.startsWith("sn") ? "breakfast" : "main";
+      // Snídaně na WeilHubu neukazujeme, jen obědy
+      if (kind === "breakfast") continue;
       const allergens = Array.isArray(raw.alergeny)
         ? (raw.alergeny as unknown[])
             .filter((a): a is [string, string] => Array.isArray(a) && typeof a[0] === "string")
             .map(([code, n]) => ({ code: code.trim(), name: String(n ?? "").trim() }))
         : [];
-      const label = str(raw.druh_popis) || (kind === "soup" ? "Polévka" : kind === "breakfast" ? "Snídaně" : "Oběd");
+      const label = str(raw.druh_popis) || (kind === "soup" ? "Polévka" : "Oběd");
       const list = days.get(date) ?? [];
       list.push({ kind, label, name, allergens });
       days.set(date, list);
