@@ -479,3 +479,49 @@ describe("hlasování a aktivita", () => {
     await expect(db.query("select * from public.activity_people('poll', $1)", [textPollId])).rejects.toThrow(/anonymní/);
   });
 });
+
+describe("kalendář přes soukromý odkaz", () => {
+  const HASH_K = "d".repeat(64);
+  const HASH_KP = "e".repeat(64);
+  type Feed = { exams: { title: string; group: string | null }[]; assignments: { done: boolean }[] };
+  const call = async (hash: string) =>
+    (await db.query<{ data: Feed | null }>("select public.calendar_feed($1) as data", [hash])).rows[0].data;
+
+  it("student si vytvoří jen vlastní odkaz, tabulka je soukromá", async () => {
+    await asUser(db, studentId);
+    await db.query("insert into public.calendar_tokens (token_hash) values ($1)", [HASH_K]);
+    await expect(
+      db.query("insert into public.calendar_tokens (user_id, token_hash) values ($1, $2)", [editorId, "9".repeat(64)]),
+    ).rejects.toThrow(/row-level security/);
+    await asAnon(db);
+    await expect(db.query("select * from public.calendar_tokens")).rejects.toThrow(/permission denied/);
+  });
+
+  it("vydá jen zveřejněné testy a úkoly své skupiny, neplatný odkaz nic", async () => {
+    await asSuperuser(db);
+    await db.query("update public.profiles set preferences = coalesce(preferences, '{}'::jsonb) || '{\"studyGroup\":\"S2\"}' where id = $1", [studentId]);
+    await asUser(db, editorId);
+    for (const [title, group, status] of [
+      ["Test pro S2", "S2", "published"],
+      ["Test pro S1", "S1", "published"],
+      ["Rozpracovaný test", null, "draft"],
+    ] as const) {
+      await db.query("insert into public.exams (subject_id, title, exam_date, study_group, status) values ($1, $2, current_date + 5, $3, $4)", [SUBJECT, title, group, status]);
+    }
+    await asAnon(db);
+    const feed = (await call(HASH_K))!;
+    const titles = feed.exams.map((e) => e.title);
+    expect(titles).toContain("Test pro S2");
+    expect(titles).not.toContain("Test pro S1");
+    expect(titles).not.toContain("Rozpracovaný test");
+    expect(await call("0".repeat(64))).toBeNull();
+    expect(await call("neplatny")).toBeNull();
+  });
+
+  it("neschválený uživatel kalendář nedostane", async () => {
+    await asSuperuser(db);
+    await db.query("insert into public.calendar_tokens (user_id, token_hash) values ($1, $2)", [pendingId, HASH_KP]);
+    await asAnon(db);
+    expect(await call(HASH_KP)).toBeNull();
+  });
+});

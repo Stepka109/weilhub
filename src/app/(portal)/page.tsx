@@ -18,7 +18,7 @@ import { CompletionToggle } from "@/components/portal/toggles";
 import { requireUser } from "@/lib/auth";
 import { GroupBadge } from "@/components/portal/group-badge";
 import { getAnnouncements, getPolls, getUpcomingEvents, getAssignments, getExams, getMaterials, getSettings } from "@/lib/data/portal";
-import { dueInfo, formatDate, formatDue, formatTime, greetingDate, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
+import { dueInfo, formatDate, formatDue, formatTime, greetingDate, nowMinutes, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { NOTICE_KIND, NoticeDateTile, noticeRelative, noticeWhen } from "@/components/portal/notice-meta";
 import { AssignmentDialog } from "@/components/portal/assignment-dialog";
@@ -27,6 +27,8 @@ import { LessonCountdown } from "@/components/portal/lesson-countdown";
 import { getTimetableWeek } from "@/lib/data/timetable";
 import { dayLessons } from "@/lib/widget";
 import { PollCard } from "@/components/portal/poll-card";
+import { CanteenCard } from "@/components/portal/canteen-menu";
+import { canteenDayFor, getCanteenMenu } from "@/lib/canteen";
 
 export const metadata = { title: "Domů" };
 
@@ -41,7 +43,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const today = todayIso();
   const group = user.profile.preferences?.studyGroup ?? null;
-  const [assignments, exams, materials, announcements, settings, upcoming, timetable, polls] = await Promise.all([
+  const [assignments, exams, materials, announcements, settings, upcoming, timetable, polls, canteen] = await Promise.all([
     // Nesplněné úkoly včetně těch po termínu (za poslední 2 týdny)
     getAssignments(user.id, { from: shiftDate(today, -14), onlyOpen: true, limit: 6, group }),
     getExams({ upcoming: true, limit: 5, group }),
@@ -54,7 +56,10 @@ export default async function DashboardPage() {
     getTimetableWeek(schoolWeek(today)[0], { group: group ?? "both" }).catch(() => null),
     // Otevřená hlasování, ve kterých student ještě nehlasoval – na nástěnce jako důležité
     getPolls(user.id, { onlyOpen: true }).catch(() => []),
+    // Jídelníček ze Strava.cz (při výpadku se karta nezobrazí)
+    getCanteenMenu(),
   ]);
+  const canteenDay = canteen ? canteenDayFor(canteen, today, nowMinutes()) : null;
   const pendingPolls = polls.filter((p) => !p.myVote);
   const todayRow = timetable?.week.days.find((d) => d.date === today);
   const todayLessons = timetable && todayRow ? dayLessons(todayRow, timetable.week) : [];
@@ -348,6 +353,8 @@ export default async function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {canteenDay && <CanteenCard day={canteenDay} today={today} />}
     </div>
   );
 }

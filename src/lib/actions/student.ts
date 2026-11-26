@@ -174,3 +174,34 @@ export async function votePoll(pollId: string, choices: number[], answer: string
   revalidatePath("/", "layout");
   return { ok: true, message: "Hlas byl uložen." };
 }
+
+/**
+ * Soukromý odkaz kalendáře (testy, úkoly, akce) pro Google / Apple kalendář.
+ * Vrací klíč jen jednou – v databázi je uložen pouze jeho otisk.
+ */
+export async function createCalendarToken(): Promise<ActionResult<{ token: string }>> {
+  const auth = await getActionUser();
+  if ("error" in auth) return { ok: false, error: auth.error };
+  const token = newWidgetToken();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("calendar_tokens")
+    .upsert(
+      { user_id: auth.user.id, token_hash: widgetTokenHash(token), created_at: new Date().toISOString(), last_used_at: null },
+      { onConflict: "user_id" },
+    );
+  if (error) return { ok: false, error: "Odkaz kalendáře se nepodařilo vytvořit." };
+  revalidatePath("/nastaveni");
+  return { ok: true, data: { token }, message: "Odkaz kalendáře je připravený." };
+}
+
+/** Zruší odkaz kalendáře – odebíraný kalendář přestane přibývat. */
+export async function deleteCalendarToken(): Promise<ActionResult> {
+  const auth = await getActionUser();
+  if ("error" in auth) return { ok: false, error: auth.error };
+  const supabase = await createClient();
+  const { error } = await supabase.from("calendar_tokens").delete().eq("user_id", auth.user.id);
+  if (error) return { ok: false, error: "Odkaz kalendáře se nepodařilo zrušit." };
+  revalidatePath("/nastaveni");
+  return { ok: true, message: "Odkaz kalendáře je zrušený." };
+}

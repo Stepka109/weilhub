@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Link2,
   Megaphone,
+  UtensilsCrossed,
   Settings,
   Users,
   Vote,
@@ -35,6 +36,7 @@ export const PORTAL_NAV: NavItem[] = [
   { href: "/rozvrh", label: "Rozvrh", icon: CalendarDays, anim: "bounce", prefix: true },
   { href: "/kalendar", label: "Kalendář", icon: CalendarRange, anim: "pop", prefix: true },
   { href: "/oznameni", label: "Oznámení", icon: Bell, anim: "bell", prefix: true },
+  { href: "/jidelna", label: "Jídelna", icon: UtensilsCrossed, anim: "wiggle", prefix: true },
   { href: "/hlasovani", label: "Hlasování", icon: Vote, anim: "pop", prefix: true },
   { href: "/odkazy", label: "Důležité odkazy", icon: Link2, anim: "wiggle", prefix: true },
 ];
