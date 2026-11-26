@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Popover } from "radix-ui";
-import { ArrowRight, Bell, CalendarHeart, Info, Moon, Palette, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, Bell, CalendarHeart, Clock3, Info, Moon, NotebookPen, Palette, ShieldCheck, Smartphone, UtensilsCrossed, Vote, X } from "lucide-react";
 import { updatePreferences } from "@/lib/actions/student";
 import { NEWS, type NewsItem } from "@/lib/news";
 
@@ -13,6 +13,11 @@ const ICONS: Record<NewsItem["icon"], typeof Info> = {
   calendar: CalendarHeart,
   palette: Palette,
   shield: ShieldCheck,
+  notebook: NotebookPen,
+  utensils: UtensilsCrossed,
+  vote: Vote,
+  clock: Clock3,
+  phone: Smartphone,
 };
 
 /**

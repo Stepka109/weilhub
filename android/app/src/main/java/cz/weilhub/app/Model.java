@@ -127,6 +127,55 @@ final class Model {
         return s;
     }
 
+    static final class Dish {
+        String kind, label, name;
+    }
+
+    static final class CanteenDay {
+        String date;
+        final List<Dish> dishes = new ArrayList<>();
+    }
+
+    /** Oběd v jídelně z odpovědi /api/widget (dnes, po obědech další dny). */
+    static List<CanteenDay> parseCanteen(String body) {
+        List<CanteenDay> out = new ArrayList<>();
+        try {
+            JSONArray days = new JSONObject(body).optJSONArray("canteen");
+            for (int i = 0; days != null && i < days.length(); i++) {
+                JSONObject d = days.getJSONObject(i);
+                CanteenDay day = new CanteenDay();
+                day.date = str(d, "date");
+                JSONArray dishes = d.optJSONArray("dishes");
+                for (int k = 0; dishes != null && k < dishes.length(); k++) {
+                    JSONObject o = dishes.getJSONObject(k);
+                    Dish dish = new Dish();
+                    dish.kind = str(o, "kind");
+                    dish.label = str(o, "label");
+                    dish.name = str(o, "name");
+                    day.dishes.add(dish);
+                }
+                out.add(day);
+            }
+        } catch (Exception ignored) {
+            // bez jídelníčku
+        }
+        return out;
+    }
+
+    /** Dnes, Zítra nebo název dne s datem. */
+    static String dayLabel(String iso) {
+        try {
+            LocalDate d = LocalDate.parse(iso);
+            LocalDate today = LocalDate.now();
+            if (d.equals(today)) return "Dnes";
+            if (d.equals(today.plusDays(1))) return "Zítra";
+            String[] names = {"Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"};
+            return names[d.getDayOfWeek().getValue() - 1] + " " + d.getDayOfMonth() + ". " + d.getMonthValue() + ".";
+        } catch (Exception e) {
+            return iso;
+        }
+    }
+
     /** Výuka v uloženém dni už skončila (nebo je to starý den) – je čas načíst další. */
     static boolean isOver(Day day) {
         String today = LocalDate.now().toString();

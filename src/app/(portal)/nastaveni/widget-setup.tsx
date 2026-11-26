@@ -56,7 +56,7 @@ export function WidgetSetup({ status }: { status: { createdAt: string; lastUsedA
     <Card className="mt-6">
       <CardHeader
         title="Widget na telefon"
-        description="Rozvrh přímo na ploše telefonu – na iPhonu i na Androidu."
+        description="Rozvrh a oběd v jídelně přímo na ploše telefonu – na iPhonu i na Androidu."
         icon={<Smartphone className="size-5 text-muted" aria-hidden />}
       />
       <CardBody className="space-y-5">
@@ -104,6 +104,10 @@ export function WidgetSetup({ status }: { status: { createdAt: string; lastUsedA
               <strong>WeilHub</strong>.
             </li>
             <li>
+              <strong>Widget jídelny:</strong> přidej další widget Scriptable, vyber Script: <strong>WeilHub</strong> a do pole <strong>Parameter</strong> napiš{" "}
+              <strong>jidelna</strong>. Ukáže dnešní oběd (po obědech zítřejší), velký widget dva dny.
+            </li>
+            <li>
               <strong>Zamčená obrazovka:</strong> podrž prst na zamčené obrazovce → Přizpůsobit → Zamčená obrazovka → widgety → Scriptable → obdélník nebo
               kroužek → Script: <strong>WeilHub</strong>.
             </li>
@@ -118,7 +122,8 @@ export function WidgetSetup({ status }: { status: { createdAt: string; lastUsedA
               Tady klepni na <strong>Vytvořit widget</strong> a potom na <strong>Propojit aplikaci</strong>. Otevře se aplikace WeilHub a sama se propojí.
             </li>
             <li>
-              V aplikaci klepni na <strong>Velký widget</strong> nebo <strong>Malý widget</strong> – nebo podrž prst na ploše → Widgety → WeilHub.
+              V aplikaci klepni na <strong>Velký widget</strong>, <strong>Malý widget</strong> nebo <strong>Widget jídelny</strong> – nebo podrž prst na ploše →
+              Widgety → WeilHub.
             </li>
           </ol>
         )}

@@ -6,7 +6,7 @@ import { DARK_MODE_ENABLED } from "./theme";
  * neodklikne (uloží se k účtu v předvolbách jako `newsSeen`).
  */
 export interface NewsItem {
-  icon: "moon" | "bell" | "calendar" | "palette" | "shield";
+  icon: "moon" | "bell" | "calendar" | "palette" | "shield" | "notebook" | "utensils" | "vote" | "clock" | "phone";
   title: string;
   text: string;
   href?: string;
@@ -14,34 +14,50 @@ export interface NewsItem {
 }
 
 export const NEWS: { id: string; title: string; items: NewsItem[] } = {
-  id: "2026-11-29",
-  title: "Co je nového ve WeilHubu",
+  id: "2026-12-prosinec",
+  title: "Prosincová aktualizace",
   items: [
     {
-      icon: "moon",
-      title: "Světlý a tmavý vzhled",
-      text: "Přepínej tlačítkem se sluncem a měsícem vedle této ikonky, nebo nech vzhled podle nastavení zařízení.",
-      href: "/nastaveni#vzhled",
-      cta: "Nastavit vzhled",
+      icon: "notebook",
+      title: "Vlastní poznámkový blok",
+      text: "Poznámky ke každému předmětu: piš na klávesnici, kresli perem (Apple Pencil) nebo prstem a vkládej obrázky. Jsou jen tvoje, dokud je nesdílíš.",
+      href: "/poznamky",
+      cta: "Otevřít poznámky",
     },
     {
-      icon: "bell",
-      title: "Upozornění do telefonu",
-      text: "Dáme ti vědět o novém testu, úkolu, oznámení nebo změně v rozvrhu. Na iPhonu funguje ve WeilHubu přidaném na plochu.",
-      href: "/nastaveni#upozorneni",
-      cta: "Zapnout upozornění",
+      icon: "utensils",
+      title: "Jídelna",
+      text: "Co je k obědu najdeš rovnou na nástěnce, celý jídelníček v sekci Jídelna.",
+      href: "/jidelna",
+      cta: "Zobrazit jídelníček",
     },
     {
       icon: "calendar",
-      title: "Události a termíny",
-      text: "V oznámeních najdeš, co se kdy chystá (třeba hospitace) a co je potřeba do kdy udělat nebo rozhodnout.",
-      href: "/oznameni",
-      cta: "Zobrazit oznámení",
+      title: "Testy a úkoly ve tvém kalendáři",
+      text: "Propoj WeilHub s Google, Apple nebo Outlook kalendářem – testy, úkoly a akce se doplní samy, i s připomenutím večer předem.",
+      href: "/nastaveni",
+      cta: "Propojit kalendář",
     },
     {
-      icon: "palette",
-      title: "Barvy Weilovky",
-      text: "WeilHub má nové barvy podle loga školy.",
+      icon: "vote",
+      title: "Hlasování",
+      text: "Ankety pro třídu – hlasuješ přímo na nástěnce a hned vidíš výsledky.",
+      href: "/hlasovani",
+      cta: "Zobrazit hlasování",
+    },
+    {
+      icon: "clock",
+      title: "Úkoly, odpočet a rozvrh",
+      text: "Úkol otevřeš v okně se zadáním a pruhem, kolik zbývá do termínu. Na nástěnce běží odpočet do konce hodiny a v rozvrhu je dnešní den i probíhající hodina zvýrazněná oranžově.",
+      href: "/ukoly",
+      cta: "Zobrazit úkoly",
+    },
+    {
+      icon: "phone",
+      title: "Widgety pro iPhone i Android",
+      text: "Rozvrh a nově i jídelníček na ploše telefonu – v barvách Weilovky a i v tmavém vzhledu. Pro Android je aplikace WeilHub.",
+      href: "/nastaveni",
+      cta: "Nastavit widget",
     },
   ].filter((item) => DARK_MODE_ENABLED || item.icon !== "moon") as NewsItem[],
 };

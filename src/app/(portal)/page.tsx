@@ -202,6 +202,9 @@ export default async function DashboardPage() {
         ))}
       </section>
 
+      {/* Jídelna – oběd dnes (po obědech zítřek) */}
+      {canteenDay && <CanteenCard day={canteenDay} today={today} />}
+
       <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
         {/* Nadcházející testy */}
         <Card>
@@ -354,7 +357,6 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {canteenDay && <CanteenCard day={canteenDay} today={today} />}
     </div>
   );
 }

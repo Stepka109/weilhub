@@ -6,4 +6,6 @@
     <string name="widget_list_desc">Rozvrh dne se změnami</string>
     <string name="widget_small_desc">Probíhající hodina s odpočtem</string>
     <string name="widget_loading">Načítám…</string>
+    <string name="widget_canteen">Jídelna</string>
+    <string name="widget_canteen_desc">Dnešní oběd ve školní jídelně</string>
 </resources>

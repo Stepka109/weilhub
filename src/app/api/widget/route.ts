@@ -4,6 +4,7 @@ import { isSupabaseConfigured, supabasePublicKey, supabaseUrl } from "@/lib/supa
 import { nowMinutes, schoolWeek, shiftDate, todayIso } from "@/lib/dates";
 import { widgetDay, type WidgetRaw } from "@/lib/widget";
 import { isWidgetToken, widgetTokenHash } from "@/lib/widget-token";
+import { getCanteenMenu } from "@/lib/canteen";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -14,7 +15,8 @@ function fail(status: number, error: string) {
 /**
  * Rozvrh pro widget na iPhonu (Scriptable). Ověřuje se osobním klíčem
  * v hlavičce `Authorization: Bearer …` – klíč si student vytvoří v Nastavení.
- * Vrací jen rozvrh jednoho dne, nic dalšího.
+ * Vrací rozvrh jednoho dne a oběd ve školní jídelně (dnes, po obědech
+ * nejbližší další dny), nic dalšího.
  */
 export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured()) return fail(503, "Portál není nastavený.");
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
 
   const today = todayIso();
   const supabase = createClient(supabaseUrl, supabasePublicKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const menuPromise = getCanteenMenu();
   const { data, error } = await supabase.rpc("widget_timetable", {
     p_token_hash: widgetTokenHash(token),
     p_from: schoolWeek(today)[0],
@@ -49,8 +52,16 @@ export async function GET(request: NextRequest) {
     holidays: data.holidays ?? [],
   };
 
+  // Jídelna: dnes do 14:30, potom další dny (widget ukáže 1–2 dny)
+  const nowMin = nowMinutes();
+  const menu = await menuPromise;
+  const canteen = (menu ?? [])
+    .filter((d) => d.date > today || (d.date === today && nowMin < 14 * 60 + 30))
+    .slice(0, 2)
+    .map((d) => ({ date: d.date, dishes: d.dishes.map(({ kind, label, name }) => ({ kind, label, name })) }));
+
   return NextResponse.json(
-    { ok: true, day: widgetDay(raw, today, nowMinutes()), generatedAt: new Date().toISOString() },
+    { ok: true, day: widgetDay(raw, today, nowMin), canteen, generatedAt: new Date().toISOString() },
     { headers: NO_STORE },
   );
 }

@@ -9,8 +9,6 @@ import android.os.Bundle;
 /** Společný základ obou widgetů: načtení dat na pozadí a překreslení. */
 abstract class BaseWidget extends AppWidgetProvider {
 
-    abstract boolean small();
-
     private void refreshAsync(Context context, boolean fetch) {
         final PendingResult result = goAsync();
         final Context c = context.getApplicationContext();
@@ -34,7 +32,7 @@ abstract class BaseWidget extends AppWidgetProvider {
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager m, int id, Bundle options) {
-        WidgetUpdater.render(context, m, id, small());
+        WidgetUpdater.render(context, m, id);
     }
 
     @Override

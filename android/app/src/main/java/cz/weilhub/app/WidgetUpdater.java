@@ -35,12 +35,17 @@ final class WidgetUpdater {
 
     static void renderAll(Context c) {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
-        for (int id : m.getAppWidgetIds(new ComponentName(c, RozvrhWidget.class))) render(c, m, id, false);
-        for (int id : m.getAppWidgetIds(new ComponentName(c, TedWidget.class))) render(c, m, id, true);
+        for (Class<?> cls : new Class<?>[] {RozvrhWidget.class, TedWidget.class, JidelnaWidget.class}) {
+            for (int id : m.getAppWidgetIds(new ComponentName(c, cls))) render(c, m, id);
+        }
         schedule(c);
     }
 
-    static void render(Context c, AppWidgetManager m, int id, boolean small) {
+    static void render(Context c, AppWidgetManager m, int id) {
+        android.appwidget.AppWidgetProviderInfo info = m.getAppWidgetInfo(id);
+        String cls = info != null && info.provider != null ? info.provider.getClassName() : "";
+        boolean small = cls.endsWith("TedWidget");
+        boolean canteen = cls.endsWith("JidelnaWidget");
         Bundle o = m.getAppWidgetOptions(id);
         int wDp = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
         int hDp = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
@@ -56,7 +61,9 @@ final class WidgetUpdater {
         boolean offline = error != null && day != null;
 
         RemoteViews v;
-        if (small || wDp < 200) {
+        if (canteen) {
+            v = canteen(c, cache, message);
+        } else if (small || wDp < 200) {
             v = small(c, day, message);
         } else {
             v = new RemoteViews(c.getPackageName(), R.layout.widget_list);
@@ -64,7 +71,7 @@ final class WidgetUpdater {
             v.setImageViewBitmap(R.id.img, Renderer.list(c, day, message, offline, wDp, hDp, false));
             v.setImageViewBitmap(R.id.img_dark, Renderer.list(c, day, message, offline, wDp, hDp, true));
         }
-        v.setOnClickPendingIntent(R.id.root, linked ? openWeb(c) : openApp(c));
+        v.setOnClickPendingIntent(R.id.root, linked ? openWeb(c, canteen ? "/jidelna" : "/rozvrh") : openApp(c));
         m.updateAppWidget(id, v);
     }
 
@@ -155,6 +162,36 @@ final class WidgetUpdater {
         return v;
     }
 
+    private static final int[][] ROWS = {
+        {R.id.row1, R.id.lab1, R.id.name1}, {R.id.row2, R.id.lab2, R.id.name2},
+        {R.id.row3, R.id.lab3, R.id.name3}, {R.id.row4, R.id.lab4, R.id.name4},
+    };
+
+    /** Widget jídelny: polévka a jídla na výběr. */
+    private static RemoteViews canteen(Context c, String cache, String message) {
+        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_canteen);
+        java.util.List<Model.CanteenDay> days = cache == null ? java.util.Collections.emptyList() : Model.parseCanteen(cache);
+        for (int[] r : ROWS) v.setViewVisibility(r[0], View.GONE);
+        if (days.isEmpty()) {
+            v.setTextViewText(R.id.c_label, "JÍDELNA");
+            v.setTextViewText(R.id.c_msg, message != null ? message : "Jídelníček zatím není zveřejněný.");
+            v.setViewVisibility(R.id.c_msg, View.VISIBLE);
+            return v;
+        }
+        Model.CanteenDay day = days.get(0);
+        v.setViewVisibility(R.id.c_msg, View.GONE);
+        v.setTextViewText(R.id.c_label, ("Oběd · " + Model.dayLabel(day.date)).toUpperCase());
+        for (int i = 0; i < ROWS.length && i < day.dishes.size(); i++) {
+            Model.Dish d = day.dishes.get(i);
+            boolean soup = "soup".equals(d.kind);
+            v.setViewVisibility(ROWS[i][0], View.VISIBLE);
+            v.setTextViewText(ROWS[i][1], soup ? "Polévka" : d.label);
+            color(c, v, ROWS[i][1], soup ? R.color.orange : R.color.teal);
+            v.setTextViewText(ROWS[i][2], d.name);
+        }
+        return v;
+    }
+
     private static long millisAt(int minuteOfDay) {
         return LocalDate.now().atTime(LocalTime.of(minuteOfDay / 60 % 24, minuteOfDay % 60))
                 .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
@@ -181,9 +218,9 @@ final class WidgetUpdater {
         am.setWindow(AlarmManager.RTC, next, 60_000, pi);
     }
 
-    private static PendingIntent openWeb(Context c) {
-        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(Store.base(c) + "/rozvrh")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        return PendingIntent.getActivity(c, 2, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    private static PendingIntent openWeb(Context c, String path) {
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(Store.base(c) + path)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return PendingIntent.getActivity(c, path.hashCode(), i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private static PendingIntent openApp(Context c) {

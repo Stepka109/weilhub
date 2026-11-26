@@ -8,6 +8,7 @@ const SCRIPT = String.raw`// WeilHub – rozvrh na plochu a zamčenou obrazovku 
 // tvůj osobní klíč – nikomu ho neposílej.
 const API = "__URL__/api/widget";
 const OPEN = "__URL__/rozvrh";
+const CANTEEN_OPEN = "__URL__/jidelna";
 const KEY = "__KEY__";
 
 // Barvy Weilovky (navy, tyrkysová, limetková); karty hodin mají barvy rozvrhu
@@ -521,6 +522,68 @@ function smallWidget(w, data) {
   }
 }
 
+// ------------------------------------------------------- jídelna
+const DAYS = ["Neděle", "Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota"];
+function canteenLabel(iso) {
+  if (iso === todayIso) return "Dnes";
+  const t = new Date(now.getTime() + 86400000);
+  if (iso === t.getFullYear() + "-" + pad2(t.getMonth() + 1) + "-" + pad2(t.getDate())) return "Zítra";
+  const p = iso.split("-").map(Number);
+  const d = new Date(p[0], p[1] - 1, p[2]);
+  return DAYS[d.getDay()] + " " + p[2] + ". " + p[1] + ".";
+}
+
+// Oběd ve školní jídelně: polévka a jídla na výběr (velký widget 2 dny)
+function canteenWidget(w, data, family) {
+  const days = (data.canteen || []).slice(0, family === "large" || family === "extraLarge" ? 2 : 1);
+  const small = family === "small";
+  w.setPadding(small ? 13 : 14, 14, 12, 14);
+  w.backgroundColor = col("bg");
+
+  const head = w.addStack();
+  head.centerAlignContent();
+  head.addImage(logoImage(20)).imageSize = new Size(20, 20);
+  head.addSpacer(7);
+  const title = head.addText(days.length ? "OBĚD · " + canteenLabel(days[0].date).toUpperCase() : "JÍDELNA");
+  title.font = Font.boldSystemFont(10.5);
+  title.textColor = col("orange");
+  title.lineLimit = 1;
+  w.addSpacer(small ? 6 : 8);
+
+  if (!days.length) {
+    addT(w, "Jídelníček zatím není zveřejněný.", Font.systemFont(13), col("muted"), 3);
+    w.addSpacer();
+    return;
+  }
+
+  days.forEach((day, di) => {
+    if (di > 0) {
+      w.addSpacer(10);
+      const h = addT(w, canteenLabel(day.date).toUpperCase(), Font.boldSystemFont(10.5), col("orange"));
+      h.lineLimit = 1;
+      w.addSpacer(4);
+    }
+    day.dishes.forEach((d, i) => {
+      if (i) w.addSpacer(small ? 4 : 6);
+      const soup = d.kind === "soup";
+      if (small) {
+        // Malý widget: jen názvy, polévka šedě
+        addT(w, d.name, soup ? Font.systemFont(11) : Font.semiboldSystemFont(12), soup ? col("muted") : col("text"), soup ? 1 : 2);
+        return;
+      }
+      const row = w.addStack();
+      row.topAlignContent();
+      const lab = row.addStack();
+      lab.size = new Size(58, 0);
+      addT(lab, soup ? "Polévka" : d.label, Font.boldSystemFont(10.5), soup ? col("orange") : col("teal"));
+      lab.addSpacer();
+      row.addSpacer(6);
+      addT(row, d.name, Font.semiboldSystemFont(13), col("text"), soup ? 1 : 2);
+    });
+  });
+  w.addSpacer();
+}
+
 // ---------------------------------------------------------------- widget
 function nextRefresh(day) {
   const st = stateOf(day);
@@ -538,19 +601,23 @@ function nextRefresh(day) {
 
 const data = await load();
 let family = config.widgetFamily;
+// Widget jídelny: v nastavení widgetu (Parameter) napiš „jidelna“
+let canteenMode = /j[ií]d/i.test(String(args.widgetParameter || ""));
 if (!family) {
   // Náhled v aplikaci: zeptat se, jakou velikost ukázat
   const a = new Alert();
   a.title = "Náhled widgetu";
-  a.addAction("Velký");
-  a.addAction("Střední");
-  a.addAction("Malý");
-  family = ["large", "medium", "small"][Math.max(0, await a.presentSheet())];
+  ["Rozvrh – velký", "Rozvrh – střední", "Rozvrh – malý", "Jídelna – střední", "Jídelna – malý"].forEach((t) => a.addAction(t));
+  const pick = Math.max(0, await a.presentSheet());
+  family = ["large", "medium", "small", "medium", "small"][pick];
+  canteenMode = pick >= 3;
 }
 const w = new ListWidget();
-w.url = OPEN;
+w.url = canteenMode ? CANTEEN_OPEN : OPEN;
 
-if (data.error || !data.day) {
+if (canteenMode && !data.error && family.indexOf("accessory") !== 0) {
+  canteenWidget(w, data, family);
+} else if (data.error || !data.day) {
   w.setPadding(12, 12, 12, 12);
   w.backgroundColor = col("bg");
   const top = w.addStack();
@@ -576,7 +643,8 @@ if (data.error || !data.day) {
 } else {
   listWidget(w, data, family === "extraLarge" ? "large" : family);
 }
-if (data.day) w.refreshAfterDate = nextRefresh(data.day);
+if (canteenMode) w.refreshAfterDate = new Date(now.getTime() + 60 * 60000);
+else if (data.day) w.refreshAfterDate = nextRefresh(data.day);
 
 if (config.runsInWidget) Script.setWidget(w);
 else if (family === "small") await w.presentSmall();

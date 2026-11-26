@@ -162,6 +162,8 @@ public class MainActivity extends Activity {
         box.addView(button("Velký widget · Rozvrh", true, v -> pin(RozvrhWidget.class)));
         space(8);
         box.addView(button("Malý widget · Teď a další", true, v -> pin(TedWidget.class)));
+        space(8);
+        box.addView(button("Widget jídelny · Oběd", true, v -> pin(JidelnaWidget.class)));
         space(6);
         box.addView(text("Widget jde přidat i ručně: podrž prst na ploše → Widgety → WeilHub.", 13, false, Renderer.BRAND_MUTED));
         space(18);
