@@ -17,7 +17,11 @@
   --tt-cell: #eef4fb;
   --tt-cell-border: #cdd9e8;
   --tt-state-bg: #ffffff;
-  --tt-today: #f6f9ff;
+  --tt-today: #fff4e6;
+  --tt-today-ink: #c86a00;
+  --tt-today-cell: #ffeedb;
+  --tt-today-border: #ffd3a1;
+  --tt-now-bg: #ffe3bf;
   --tt-half-empty: #dbe3ee;
   --tt-outside-a: #fafbfd;
   --tt-outside-b: #f3f6fa;
@@ -59,7 +63,8 @@
   box-shadow: 1px 0 0 var(--tt-grid);
 }
 .wh-tt .tt-day small { display: block; margin-top: 3px; font-family: var(--font-sans); font-size: .7rem; font-weight: 500; color: var(--wh-muted); }
-.wh-tt .tt-day.is-today, .wh-tt .tt-day.is-today small { color: var(--wh-blue); }
+.wh-tt .tt-day.is-today { background: var(--tt-today); }
+.wh-tt .tt-day.is-today, .wh-tt .tt-day.is-today small { color: var(--tt-today-ink); }
 .wh-tt button.tt-day-btn { width: 100%; height: 100%; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; }
 .wh-tt button.tt-day-btn:hover { background: var(--wh-light-blue); }
 .wh-tt thead .tt-day { z-index: 7; }
@@ -67,7 +72,9 @@
   position: relative; height: var(--tt-row); padding: 6px;
   background: var(--wh-card); vertical-align: middle; text-align: center;
 }
-.wh-tt td.tt-cell.is-today { background: var(--tt-today); }
+/* Dnešní den: celý řádek lehce do oranžova */
+.wh-tt td.tt-cell.is-today, .wh-tt td.tt-wide.is-today { background: var(--tt-today); }
+.wh-tt td.is-today .st-default { background: var(--tt-today-cell); border-color: var(--tt-today-border); }
 .wh-tt .tt-card {
   position: relative; height: 100%; width: 100%; container-type: inline-size;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
@@ -110,7 +117,14 @@
 .wh-tt .st-event .tt-tag { background: var(--tt-green); }
 .wh-tt .st-new { background: var(--tt-state-bg); border: 2px solid var(--tt-green); }
 .wh-tt .st-new .tt-tag { background: var(--tt-green); }
-.wh-tt .is-now { box-shadow: inset 0 0 0 2px var(--tt-orange); }
+/* Probíhající hodina: oranžový rámeček a jemná záře */
+.wh-tt .is-now {
+  border-color: var(--tt-orange);
+  box-shadow: 0 0 0 3px var(--tt-orange), 0 6px 18px -6px rgba(255, 138, 0, .6);
+}
+.wh-tt td.is-today .is-now.st-default { background: var(--tt-now-bg);
+  z-index: 1;
+}
 
 /* skupiny S1 / S2 */
 .tt-group {
@@ -261,7 +275,11 @@
   --tt-cell: #1b2d4a;
   --tt-cell-border: #2d4468;
   --tt-state-bg: #152238;
-  --tt-today: #172843;
+  --tt-today: #2c2416;
+    --tt-today-ink: #ffb04d;
+    --tt-today-cell: #3a2c18;
+    --tt-today-border: #5c4220;
+    --tt-now-bg: #4a3216;
   --tt-half-empty: #2d4468;
   --tt-outside-a: #142036;
   --tt-outside-b: #18263d;
@@ -283,7 +301,11 @@
     --tt-cell: #1b2d4a;
     --tt-cell-border: #2d4468;
     --tt-state-bg: #152238;
-    --tt-today: #172843;
+    --tt-today: #2c2416;
+    --tt-today-ink: #ffb04d;
+    --tt-today-cell: #3a2c18;
+    --tt-today-border: #5c4220;
+    --tt-now-bg: #4a3216;
     --tt-half-empty: #2d4468;
     --tt-outside-a: #142036;
     --tt-outside-b: #18263d;

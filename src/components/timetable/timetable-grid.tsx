@@ -347,7 +347,7 @@ export function TimetableGrid({
                   {row.outsidePeriod && !editable ? (
                     week.lessons.map((l) => <td key={l.lesson_number} className="tt-cell tt-outside" />)
                   ) : row.dayOverride ? (
-                    <td className="tt-wide" colSpan={week.lessons.length}>
+                    <td className={cn("tt-wide", isToday && "is-today")} colSpan={week.lessons.length}>
                       <button
                         type="button"
                         className={cn("tt-wide-card", row.dayOverride.kind === "event" && "is-event")}
@@ -373,7 +373,7 @@ export function TimetableGrid({
                           </div>
                         </td>
                       ) : isSpan(item) ? (
-                        <td key={`s${item.startLesson}`} className="tt-wide" colSpan={item.length}>
+                        <td key={`s${item.startLesson}`} className={cn("tt-wide", isToday && "is-today")} colSpan={item.length}>
                           <button type="button" className="tt-wide-card is-event" onClick={() => openCell(item.cell, row, item)}>
                             <span className="tt-tag">A</span>
                             <span className="tt-wide-label">
