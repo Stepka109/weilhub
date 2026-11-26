@@ -8,7 +8,8 @@ import { dbErrorMessage, idSchema, invalid, revalidateAll, withRole } from "./he
 import { cleanupStoragePaths, deleteFileRow } from "./storage";
 import { notifyPublished, statusBefore } from "./push-triggers";
 
-const MAX_CONTENT_BYTES = 1_000_000;
+// Zápis může obsahovat kresby perem (z poznámek žáků)
+const MAX_CONTENT_BYTES = 3_500_000;
 
 /** Vytvoří nebo upraví materiál. Obsah zápisu se ukládá strukturovaně (JSON). */
 export async function saveMaterial(

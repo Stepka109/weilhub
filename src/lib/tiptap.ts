@@ -7,6 +7,7 @@
  */
 import type { TiptapNode } from "./types";
 import { INLINE_MATH_IN_TEXT, renderLatex } from "./math";
+import { renderDrawingSvg } from "./drawing";
 
 const ESCAPES: Record<string, string> = {
   "&": "&amp;",
@@ -34,6 +35,8 @@ export function safeImageSrc(src: unknown): string | null {
   if (typeof src !== "string") return null;
   const v = src.trim();
   if (/^\/api\/soubory\/[0-9a-f-]{36}(\?[a-z=&0-9]*)?$/i.test(v)) return v;
+  // Obrázek z vlastní poznámky (vidí ho jen autor, nebo správce u sdílené)
+  if (/^\/api\/poznamky\/obrazek\/[0-9a-f-]{36}$/i.test(v)) return v;
   if (/^https:\/\//i.test(v)) return v;
   return null;
 }
@@ -160,6 +163,8 @@ function renderNode(node: TiptapNode, depth = 0): string {
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
       return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
     }
+    case "drawing":
+      return renderDrawingSvg(node.attrs);
     case "table":
       return `<table><tbody>${children(node, depth)}</tbody></table>`;
     case "tableRow":

@@ -372,6 +372,20 @@ h1, h2, h3, h4, .font-display {
 .prose-wh pre code { background: none; padding: 0; color: inherit; }
 .prose-wh mark { background: var(--wh-yellow); border-radius: 4px; padding: 0 0.15em; }
 .prose-wh img { max-width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--wh-border); }
+/* Dotyk a Apple Pencil: ovládací prvky reagují hned, dvojité ťuknutí nepřibližuje stránku */
+button, a, label, select, summary, [role="button"], [role="tab"], [role="radio"], [role="switch"], input[type="checkbox"], input[type="radio"] { touch-action: manipulation; }
+
+/* Kresby perem (poznámky a zápisy) – bílý papír, na každém zařízení na šířku stránky */
+.wh-drawing { margin: 1rem 0; border: 1px solid var(--wh-border); border-radius: 16px; background: #fff; overflow: hidden; }
+.wh-drawing svg { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.wh-drawing-node { position: relative; }
+.wh-drawing-node .wh-drawing { margin: 0; }
+/* Na telefonu by se plocha zmenšila moc – v editoru má min. šířku a posouvá se do stran */
+@media (max-width: 640px) {
+  .wh-drawing-node .wh-drawing { overflow-x: auto; overscroll-behavior-x: contain; }
+  .wh-drawing-node .wh-drawing svg { min-width: 640px; }
+}
+.ProseMirror-selectednode > .wh-drawing, .wh-drawing-node.ProseMirror-selectednode .wh-drawing { outline: 3px solid var(--wh-blue); outline-offset: 2px; }
 .prose-wh table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
 .prose-wh th, .prose-wh td {
   border: 1px solid var(--wh-border);

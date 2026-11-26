@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   // Aplikace je téměř celá personalizovaná (přihlášený uživatel), proto
   // používáme klasický dynamický rendering bez Cache Components.
   poweredByHeader: false,
+  experimental: {
+    // Poznámky s kresbami perem mohou mít víc než výchozí 1 MB (Vercel dovolí max. 4,5 MB)
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {

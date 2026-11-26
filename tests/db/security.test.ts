@@ -525,3 +525,62 @@ describe("kalendář přes soukromý odkaz", () => {
     expect(await call(HASH_KP)).toBeNull();
   });
 });
+
+describe("poznámkový blok", () => {
+  let otherId: string;
+  let privateId: string;
+  let sharedId: string;
+
+  it("poznámky jsou soukromé, sdílené vidí jen redaktor", async () => {
+    otherId = await createUser(db, "spoluzak@test.cz", { invite_code: "DEMO-POZVANKA", display_name: "Petr" });
+    await asUser(db, studentId);
+    privateId = (await db.query<{ id: string }>("insert into public.notes (title, subject_id) values ('Moje tajná', $1) returning id", [SUBJECT])).rows[0].id;
+    sharedId = (await db.query<{ id: string }>("insert into public.notes (title, shared) values ('Sdílená', true) returning id")).rows[0].id;
+    expect((await db.query<{ shared_at: string | null }>("select shared_at from public.notes where id = $1", [sharedId])).rows[0].shared_at).not.toBeNull();
+
+    // Spolužák nevidí nic a nemůže psát za jiného
+    await asUser(db, otherId);
+    expect(await count("select 1 from public.notes")).toBe(0);
+    await expect(db.query("insert into public.notes (user_id, title) values ($1, 'cizí')", [studentId])).rejects.toThrow(/row-level security/);
+    await db.query("update public.notes set title = 'hack' where id = $1", [sharedId]);
+
+    // Redaktor vidí jen sdílenou, upravit ji nemůže
+    await asUser(db, editorId);
+    const seen = (await db.query<{ id: string }>("select id from public.notes")).rows.map((r) => r.id);
+    expect(seen).toContain(sharedId);
+    expect(seen).not.toContain(privateId);
+    await db.query("update public.notes set title = 'přepsáno' where id = $1", [sharedId]);
+    await asUser(db, studentId);
+    expect((await db.query<{ title: string }>("select title from public.notes where id = $1", [sharedId])).rows[0].title).toBe("Sdílená");
+
+    // Anonym ani tabulku nepřečte
+    await asAnon(db);
+    await expect(db.query("select * from public.notes")).rejects.toThrow(/permission denied/);
+  });
+
+  it("obrázky: jen do vlastní poznámky a složky, redaktor vidí jen u sdílené", async () => {
+    await asUser(db, studentId);
+    const path = (id: string) => `${studentId}/${id}.png`;
+    await db.query(
+      "insert into public.note_images (note_id, storage_path, file_name, mime_type, size_bytes) values ($1, $2, 'a.png', 'image/png', 10), ($3, $4, 'b.png', 'image/png', 10)",
+      [privateId, path("11111111-1111-4111-8111-111111111111"), sharedId, path("22222222-2222-4222-8222-222222222222")],
+    );
+    await expect(
+      db.query("insert into public.note_images (note_id, storage_path, file_name, mime_type, size_bytes) values ($1, $2, 'c.png', 'image/png', 10)", [
+        privateId,
+        `${otherId}/33333333-3333-4333-8333-333333333333.png`,
+      ]),
+    ).rejects.toThrow(/row-level security/);
+    await asUser(db, otherId);
+    await expect(
+      db.query("insert into public.note_images (note_id, storage_path, file_name, mime_type, size_bytes) values ($1, $2, 'd.png', 'image/png', 10)", [
+        sharedId,
+        `${otherId}/44444444-4444-4444-8444-444444444444.png`,
+      ]),
+    ).rejects.toThrow(/row-level security/);
+    await asUser(db, editorId);
+    expect(await count("select 1 from public.note_images")).toBe(1);
+    expect((await db.query<{ ok: boolean }>("select public.can_read_note_file($1) as ok", [path("22222222-2222-4222-8222-222222222222")])).rows[0].ok).toBe(true);
+    expect((await db.query<{ ok: boolean }>("select public.can_read_note_file($1) as ok", [path("11111111-1111-4111-8111-111111111111")])).rows[0].ok).toBe(false);
+  });
+});

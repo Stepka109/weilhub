@@ -19,10 +19,12 @@ import {
   ImagePlus,
   Italic,
   Link2,
+  Globe,
   List,
   ListOrdered,
   Loader2,
   Minus,
+  PenLine,
   Pilcrow,
   Quote,
   Redo2,
@@ -41,6 +43,7 @@ import { safeHref } from "@/lib/tiptap";
 import { IMAGE_EXTS, acceptAttribute } from "@/lib/files";
 import { cn } from "@/lib/utils";
 import { FormulaDialog } from "./formula-dialog";
+import { Drawing } from "./drawing-extension";
 import { createInlineMath } from "./math-extension";
 import { convertTextFormulas, findTextFormulas } from "./math-convert";
 import type { TiptapNode } from "@/lib/types";
@@ -84,11 +87,13 @@ function Toolbar({
   onImage,
   onFormula,
   uploading,
+  allowDrawing,
 }: {
   editor: Editor;
   onImage?: () => void;
   onFormula: () => void;
   uploading: boolean;
+  allowDrawing?: boolean;
 }) {
   const s = useEditorState({
     editor,
@@ -123,6 +128,14 @@ function Toolbar({
     const safe = safeHref(url.trim());
     if (!safe) return toast.error("Odkaz musí začínat https://, http:// nebo mailto:.");
     chain().extendMarkRange("link").setLink({ href: safe }).run();
+  }
+
+  function imageFromWeb() {
+    const url = window.prompt("Adresa obrázku z internetu (https://…)", "https://");
+    if (!url || url.trim() === "https://") return;
+    const v = url.trim();
+    if (!/^https:\/\/\S+$/i.test(v)) return void toast.error("Adresa obrázku musí začínat https://.");
+    chain().setImage({ src: v, alt: "" }).run();
   }
 
   return (
@@ -198,9 +211,19 @@ function Toolbar({
         </ToolButton>
       )}
       {onImage && (
-        <ToolButton label="Vložit obrázek" disabled={uploading} onClick={onImage}>
+        <ToolButton label="Vložit obrázek ze zařízení" disabled={uploading} onClick={onImage}>
           {uploading ? <Loader2 className="animate-spin" /> : <ImagePlus />}
         </ToolButton>
+      )}
+      {allowDrawing && (
+        <>
+          <ToolButton label="Obrázek z internetu (adresa)" onClick={imageFromWeb}>
+            <Globe />
+          </ToolButton>
+          <ToolButton label="Kreslicí plocha (Apple Pencil, myš, prst)" onClick={() => chain().insertDrawing().run()}>
+            <PenLine />
+          </ToolButton>
+        </>
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -243,13 +266,25 @@ export function RichTextEditor({
   onChange,
   onUploadImage,
   placeholder = "Začněte psát zápis…",
+  allowDrawing = false,
+  ariaLabel = "Obsah zápisu",
+  onEditorReady,
 }: {
   value: TiptapNode | null;
   onChange: (doc: TiptapNode) => void;
   /** Nahraje obrázek a vrátí jeho interní adresu (/api/soubory/…) */
   onUploadImage?: (file: File) => Promise<string | null>;
   placeholder?: string;
+  /** Tlačítka pro kreslicí plochu a obrázek z internetu (poznámky) */
+  allowDrawing?: boolean;
+  ariaLabel?: string;
+  /** Přístup k editoru zvenku (např. vkládání bloků při skládání zápisu) */
+  onEditorReady?: (editor: Editor) => void;
 }) {
+  const uploadRef = React.useRef(onUploadImage);
+  React.useEffect(() => {
+    uploadRef.current = onUploadImage;
+  });
   const fileInput = React.useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = React.useState(false);
   const [formula, setFormula] = React.useState<{ latex: string; pos: number | null } | null>(null);
@@ -268,15 +303,35 @@ export function RichTextEditor({
       Superscript,
       Subscript,
       mathExtension,
+      Drawing,
       Placeholder.configure({ placeholder }),
     ],
     content: value ?? { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
-      attributes: { class: "prose-wh px-5 py-5 sm:px-8 sm:py-7", "aria-label": "Obsah zápisu", role: "textbox", "aria-multiline": "true" },
+      attributes: { class: "prose-wh px-5 py-5 sm:px-8 sm:py-7", "aria-label": ariaLabel, role: "textbox", "aria-multiline": "true" },
+      // Obrázek vložený ze schránky nebo přetažený do editoru se rovnou nahraje
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+        if (!files.length || !uploadRef.current) return false;
+        event.preventDefault();
+        for (const f of files) void insertImageRef.current?.(f);
+        return true;
+      },
+      handleDrop: (_view, event) => {
+        const files = Array.from((event as DragEvent).dataTransfer?.files ?? []).filter((f) => f.type.startsWith("image/"));
+        if (!files.length || !uploadRef.current) return false;
+        event.preventDefault();
+        for (const f of files) void insertImageRef.current?.(f);
+        return true;
+      },
     },
     // Čistá data (bez prototypů ProseMirroru) – bezpečně serializovatelná do server actions
     onUpdate: ({ editor: e }) => onChange(JSON.parse(JSON.stringify(e.getJSON())) as TiptapNode),
   });
+
+  React.useEffect(() => {
+    if (editor) onEditorReady?.(editor);
+  }, [editor, onEditorReady]);
 
   // Vzorce napsané jako text „$…$“ (např. vložené odjinud) – nabídneme převod
   const subscribeFormulas = React.useCallback(
@@ -307,6 +362,11 @@ export function RichTextEditor({
     setFormula(null);
   }
 
+  const insertImageRef = React.useRef<(file: File) => Promise<void>>(null);
+  React.useEffect(() => {
+    insertImageRef.current = insertImage;
+  });
+
   async function insertImage(file: File) {
     if (!editor || !onUploadImage) return;
     setUploading(true);
@@ -327,6 +387,7 @@ export function RichTextEditor({
         <Toolbar
           editor={editor}
           uploading={uploading}
+          allowDrawing={allowDrawing}
           onImage={onUploadImage ? () => fileInput.current?.click() : undefined}
           onFormula={() => setFormula({ latex: "", pos: null })}
         />
