@@ -23,11 +23,27 @@ import java.util.List;
 final class Renderer {
     private Renderer() {}
 
-    static final int BG = Color.WHITE, PAGE = 0xFFF4F7F8, TEXT = 0xFF162B4F, MUTED = 0xFF5B6676, NAVY = 0xFF1B3A6B,
-            TEAL = 0xFF0A7C83, TEAL_SOFT = 0xFFDBF2F1, LIME = 0xFF8DC63F, CYAN = 0xFF1FC2CA,
-            CELL = 0xFFEEF4FB, CELL_BORDER = 0xFFCDD9E8, RED = 0xFFDB2D2D, GREEN = 0xFF4F9A12, PURPLE = 0xFF7C4DDC,
-            ORANGE = 0xFFFF8A00, ORANGE_SOFT = 0xFFFFE6CC, NOW_BG = 0xFFFFF7EE,
-            S1 = 0xFF0B7D73, S1_BG = 0xFFE2F5F2, S2 = 0xFF4B3FD1, S2_BG = 0xFFEBE8FF;
+    /** Barvy značky – stejné v obou režimech (logo, proužek, úvodní obrazovka). */
+    static final int PAGE_LIGHT = 0xFFF4F7F8, BRAND_NAVY = 0xFF1B3A6B, BRAND_TEAL = 0xFF0A7C83, BRAND_TEXT = 0xFF162B4F,
+            BRAND_MUTED = 0xFF5B6676, BRAND_RED = 0xFFDB2D2D, LIME = 0xFF8DC63F, CYAN = 0xFF1FC2CA;
+
+    /** Barvy widgetu podle světlého / tmavého vzhledu telefonu (nastaví palette()). */
+    private static int BG, PAGE, TEXT, MUTED, NAVY, TEAL, TEAL_SOFT, CELL, CELL_BORDER, RED, GREEN, PURPLE,
+            ORANGE, ORANGE_SOFT, NOW_BG, S1, S1_BG, S2, S2_BG;
+
+    private static void palette(boolean dark) {
+        if (!dark) {
+            BG = Color.WHITE; PAGE = PAGE_LIGHT; TEXT = 0xFF162B4F; MUTED = 0xFF5B6676; NAVY = 0xFF1B3A6B;
+            TEAL = 0xFF0A7C83; TEAL_SOFT = 0xFFDBF2F1; CELL = 0xFFEEF4FB; CELL_BORDER = 0xFFCDD9E8;
+            RED = 0xFFDB2D2D; GREEN = 0xFF4F9A12; PURPLE = 0xFF7C4DDC; ORANGE = 0xFFFF8A00; ORANGE_SOFT = 0xFFFFE6CC;
+            NOW_BG = 0xFFFFF7EE; S1 = 0xFF0B7D73; S1_BG = 0xFFE2F5F2; S2 = 0xFF4B3FD1; S2_BG = 0xFFEBE8FF;
+        } else {
+            BG = 0xFF1C1C1E; PAGE = 0xFF2C2C2E; TEXT = 0xFFF2F5F7; MUTED = 0xFF9AA6B2; NAVY = 0xFFEEF4F7;
+            TEAL = 0xFF3CC7C0; TEAL_SOFT = 0xFF143D3E; CELL = 0xFF2C2C2E; CELL_BORDER = 0xFF3D3D40;
+            RED = 0xFFFF5C5C; GREEN = 0xFF7FD13F; PURPLE = 0xFFB99DFF; ORANGE = 0xFFFF9F2E; ORANGE_SOFT = 0xFF4A3216;
+            NOW_BG = 0xFF3B2A14; S1 = 0xFF62D6C8; S1_BG = 0xFF153F3B; S2 = 0xFFB4AAFF; S2_BG = 0xFF2D2853;
+        }
+    }
 
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint STROKE = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -39,7 +55,8 @@ final class Renderer {
         STROKE.setStrokeJoin(Paint.Join.ROUND);
     }
 
-    static Bitmap list(Context c, Model.Day day, String message, boolean offline, int wDp, int hDp) {
+    static synchronized Bitmap list(Context c, Model.Day day, String message, boolean offline, int wDp, int hDp, boolean dark) {
+        palette(dark);
         float density = c.getResources().getDisplayMetrics().density;
         float scale = Math.min(density, 3f);
         int w = Math.max(1, Math.round(wDp * scale)), h = Math.max(1, Math.round(hDp * scale));
@@ -74,7 +91,7 @@ final class Renderer {
         }
         float sy = p + 28, third = (W - 2 * p) / 3;
         rect(cv, p, sy, third, 2, 0, LIME);
-        rect(cv, p + third, sy, third, 2, 0, TEAL);
+        rect(cv, p + third, sy, third, 2, 0, BRAND_TEAL);
         rect(cv, p + 2 * third, sy, third, 2, 0, CYAN);
         float y = sy + 8;
 
@@ -167,7 +184,7 @@ final class Renderer {
 
     static void logo(Canvas cv, float x, float y, float size) {
         float k = size / 40f;
-        rect(cv, x, y, size, size, 12 * k, NAVY);
+        rect(cv, x, y, size, size, 12 * k, BRAND_NAVY);
         Path book = new Path();
         book.moveTo(x + 8 * k, y + 11.5f * k);
         book.cubicTo(x + 11.6f * k, y + 10.9f * k, x + 14.9f * k, y + 11.9f * k, x + 17.6f * k, y + 14.1f * k);

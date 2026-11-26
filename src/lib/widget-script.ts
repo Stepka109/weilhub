@@ -18,7 +18,17 @@ const COL = {
   red: "#db2d2d", green: "#4f9a12", purple: "#7c4ddc", orange: "#ff8a00", orangeSoft: "#ffe6cc", nowBg: "#fff7ee",
   S1: "#0b7d73", S1bg: "#e2f5f2", S2: "#4b3fd1", S2bg: "#ebe8ff"
 };
-const col = (k) => new Color(COL[k]);
+// Tmavý vzhled telefonu: stejné barvy ve tmavé variantě (iOS přepíná sám)
+const DARK = {
+  bg: "#1c1c1e", page: "#2c2c2e", text: "#f2f5f7", muted: "#9aa6b2", navy: "#eef4f7",
+  teal: "#3cc7c0", tealSoft: "#143d3e", line: "#3a3a3c",
+  cell: "#2c2c2e", cellBorder: "#3d3d40",
+  red: "#ff5c5c", green: "#7fd13f", purple: "#b99dff", orange: "#ff9f2e", orangeSoft: "#4a3216", nowBg: "#3b2a14",
+  S1: "#62d6c8", S1bg: "#153f3b", S2: "#b4aaff", S2bg: "#2d2853"
+};
+const col = (k) => Color.dynamic(new Color(COL[k]), new Color(DARK[k] || COL[k]));
+// Pevná barva pro obrázky (logo, čárkované rámečky) – v obou režimech stejná
+const fixed = (k) => new Color(COL[k]);
 const TAG = { changed: "S", roomchanged: "M", event: "A", cancelled: "O", new: "N" };
 
 // ---------------------------------------------------------------- data
@@ -117,7 +127,7 @@ function dashedRect(ctx, rect, r, color, lw) {
 function drawLogo(ctx, x, y, size) {
   const k = size / 40;
   const P = (px, py) => new Point(x + px * k, y + py * k);
-  roundRect(ctx, new Rect(x, y, size, size), 12 * k, col("navy"), null, 0);
+  roundRect(ctx, new Rect(x, y, size, size), 12 * k, fixed("navy"), null, 0);
   const book = new Path();
   book.move(P(8, 11.5));
   book.addCurve(P(17.6, 14.1), P(11.6, 10.9), P(14.9, 11.9));
@@ -125,13 +135,13 @@ function drawLogo(ctx, x, y, size) {
   book.addLine(P(22.4, 14.1));
   book.addCurve(P(32, 11.5), P(25.1, 11.9), P(28.4, 10.9));
   ctx.addPath(book);
-  ctx.setStrokeColor(col("lime"));
+  ctx.setStrokeColor(fixed("lime"));
   ctx.setLineWidth(2.2 * k);
   ctx.strokePath();
   const w = new Path();
   w.addLines([P(9, 15.5), P(14, 29), P(20, 18.5), P(26, 29), P(31, 15.5)]);
   ctx.addPath(w);
-  ctx.setStrokeColor(col("cyan"));
+  ctx.setStrokeColor(fixed("cyan"));
   ctx.setLineWidth(3.4 * k);
   ctx.strokePath();
 }
@@ -145,125 +155,199 @@ function logoImage(size) {
   return ctx.getImage();
 }
 
-// Pilulka s textem zarovnaná doprava k bodu „right“; vrací její levý okraj
-function pill(ctx, str, right, y, fg, bg) {
-  const w = str.length * 6.2 + 14;
-  roundRect(ctx, new Rect(right - w, y, w, 18), 9, bg, null, 0);
-  text(ctx, str, right - w, y + 2, w, 14, Font.boldSystemFont(10.5), fg, "center");
-  return right - w;
+// Obrázek s čárkovaným rámečkem (průhledný uvnitř), pro změny a akce
+function dashedImage(w, h, r, color) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(w, h);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  dashedRect(ctx, new Rect(0, 0, w, h), r, color, 2);
+  return ctx.getImage();
 }
 
-function text(ctx, str, x, y, w, h, font, color, align) {
-  if (!str || w <= 4) return;
-  ctx.setFont(font);
-  ctx.setTextColor(color);
-  if (align === "center") ctx.setTextAlignedCenter();
-  else if (align === "right") ctx.setTextAlignedRight();
-  else ctx.setTextAlignedLeft();
-  ctx.drawTextInRect(str, new Rect(x, y, w, h));
+function barImage(w, h, done) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(w, h);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  roundRect(ctx, new Rect(0, 0, w, h), h / 2, new Color("#ff8a00", 0.22), null, 0);
+  if (done > 0) roundRect(ctx, new Rect(0, 0, Math.max(h, w * done), h), h / 2, fixed("orange"), null, 0);
+  return ctx.getImage();
 }
 
-function drawRow(ctx, l, x, y, w, h, isNow) {
-  drawRowBody(ctx, l, x, y, w, h, isNow);
+function stripeImage(w) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(w, 2);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  const third = w / 3;
+  ["lime", "teal", "cyan"].forEach((k, i) => {
+    ctx.setFillColor(fixed(k));
+    ctx.fillRect(new Rect(i * third, 0, third, 2));
+  });
+  return ctx.getImage();
+}
+
+function addT(stack, str, font, color, lines) {
+  const t = stack.addText(str || " ");
+  t.font = font;
+  t.textColor = color;
+  t.lineLimit = lines || 1;
+  t.minimumScaleFactor = 0.75;
+  return t;
+}
+
+function pill(stack, str, fg, bg) {
+  const s = stack.addStack();
+  s.backgroundColor = bg;
+  s.cornerRadius = 9;
+  s.setPadding(2, 7, 2, 7);
+  addT(s, str, Font.boldSystemFont(10.5), fg);
+  return s;
+}
+
+function badge(stack, str, fg, bg) {
+  const s = stack.addStack();
+  s.backgroundColor = bg;
+  s.cornerRadius = 3;
+  s.setPadding(1, 4, 1, 4);
+  addT(s, str, Font.boldSystemFont(8), fg);
+}
+
+function addRow(parent, l, W, h, isNow) {
+  const r = parent.addStack();
+  r.size = new Size(W, h);
+  r.centerAlignContent();
+
+  const nc = r.addStack();
+  nc.size = new Size(34, h);
+  nc.layoutVertically();
+  nc.centerAlignContent();
+  nc.addSpacer();
+  addT(nc, num(l), Font.boldSystemFont(13), isNow ? col("orange") : col("text")).centerAlignText();
+  addT(nc, l.start, Font.systemFont(10), isNow ? col("orange") : col("muted")).centerAlignText();
+  nc.addSpacer();
+  r.addSpacer(4);
+
+  const cw = W - 38;
+  const card = r.addStack();
+  card.size = new Size(cw, h);
+  card.cornerRadius = 9;
+  card.layoutVertically();
+
+  let border = null, dashed = false, tag = false;
+  if (l.status === "changed") { border = "red"; tag = true; }
+  if (l.status === "roomchanged") { border = "red"; dashed = true; tag = true; }
+  if (l.status === "cancelled") { border = l.accent === "green" ? "green" : "red"; dashed = true; tag = true; }
+  if (l.status === "event") { border = "green"; dashed = true; tag = true; }
+  if (l.status === "new") { border = "green"; tag = true; }
+  if (!border) {
+    card.backgroundColor = col(isNow ? "nowBg" : "cell");
+    card.borderColor = col(isNow ? "orange" : "cellBorder");
+    card.borderWidth = isNow ? 2 : 1;
+  } else if (dashed) {
+    card.backgroundImage = dashedImage(cw, h, 9, fixed(border));
+  } else {
+    card.borderColor = col(border);
+    card.borderWidth = 2;
+  }
+
+  const c = card.addStack();
+  c.size = new Size(cw, isNow ? h - 5 : h);
+  c.centerAlignContent();
+  c.setPadding(0, tag ? 4 : 10, 0, 7);
+  if (tag) {
+    const t = c.addStack();
+    t.size = new Size(14, 16);
+    t.cornerRadius = 4;
+    t.backgroundColor = col(border);
+    t.centerAlignContent();
+    addT(t, TAG[l.status], Font.boldSystemFont(10), Color.white());
+    c.addSpacer(5);
+  }
+  if (l.status === "cancelled") {
+    c.addSpacer();
+    addT(c, title(l), Font.boldSystemFont(13), col(border));
+    c.addSpacer();
+  } else {
+    const ts = c.addStack();
+    ts.size = new Size(46, 0);
+    addT(ts, title(l), Font.boldSystemFont(14), col("text"));
+    ts.addSpacer();
+    addT(c, sub(l), Font.systemFont(11), col("muted"));
+    c.addSpacer(4);
+    c.addSpacer();
+    addT(c, l.room || "", Font.boldSystemFont(12), l.status === "roomchanged" ? col("red") : col("text"));
+  }
+  if (l.group !== "all") {
+    c.addSpacer(5);
+    badge(c, l.group, col(l.group), col(l.group + "bg"));
+  }
   // Probíhající hodina: tenký oranžový pruh, kolik už uplynulo
   if (isNow) {
-    const cx = x + 38, cw = w - 38;
     const done = Math.max(0, Math.min(1, (nowMin - mins(l.start)) / Math.max(1, mins(l.end) - mins(l.start))));
-    roundRect(ctx, new Rect(cx + 10, y + h - 5, cw - 20, 2.5), 1.25, col("orangeSoft"), null, 0);
-    if (done > 0) roundRect(ctx, new Rect(cx + 10, y + h - 5, Math.max(2.5, (cw - 20) * done), 2.5), 1.25, col("orange"), null, 0);
+    const b = card.addStack();
+    b.setPadding(0, 10, 0, 10);
+    b.addImage(barImage(cw - 20, 2.5, done)).imageSize = new Size(cw - 20, 2.5);
   }
 }
 
-function drawRowBody(ctx, l, x, y, w, h, isNow) {
-  const mid = y + h / 2;
-  const numColor = isNow ? col("orange") : col("text");
-  text(ctx, num(l), x, mid - 15, 34, 16, Font.boldSystemFont(13), numColor, "center");
-  text(ctx, l.start, x, mid + 1, 34, 13, Font.systemFont(10), isNow ? col("orange") : col("muted"), "center");
-
-  const cx = x + 38, cw = w - 38;
-  const card = new Rect(cx, y, cw, h);
-  let fill = col("cell"), border = col("cellBorder"), lw = 1, dashed = false, tag = null;
-  if (l.status === "changed") { fill = col("bg"); border = col("red"); lw = 2; tag = border; }
-  if (l.status === "roomchanged") { fill = col("bg"); border = col("red"); lw = 2; dashed = true; tag = border; }
-  if (l.status === "cancelled") { fill = col("bg"); border = col(l.accent === "green" ? "green" : "red"); lw = 2; dashed = true; tag = border; }
-  if (l.status === "event") { fill = col("bg"); border = col("green"); lw = 2; dashed = true; tag = border; }
-  if (l.status === "new") { fill = col("bg"); border = col("green"); lw = 2; tag = border; }
-  if (isNow && l.status === "default") { fill = col("nowBg"); border = col("orange"); lw = 2; }
-
-  roundRect(ctx, card, 9, fill, dashed ? null : border, lw);
-  if (dashed) dashedRect(ctx, card, 9, border, lw);
-  // Probíhající hodina se změnou: oranžový rámeček uvnitř
-  if (isNow && l.status !== "default") roundRect(ctx, new Rect(cx + 3, y + 3, cw - 6, h - 6), 7, null, col("orange"), 2);
-  if (tag) {
-    roundRect(ctx, new Rect(cx - 1, mid - 8, 14, 16), 4, tag, null, 0);
-    text(ctx, TAG[l.status], cx - 1, mid - 7, 14, 14, Font.boldSystemFont(10), Color.white(), "center");
-  }
-
-  const groupW = l.group !== "all" ? 24 : 0;
-  if (groupW) {
-    roundRect(ctx, new Rect(cx + cw - groupW - 2, mid - 6, groupW - 4, 12), 3, col(l.group + "bg"), null, 0);
-    text(ctx, l.group, cx + cw - groupW - 2, mid - 6, groupW - 4, 12, Font.boldSystemFont(8), col(l.group), "center");
-  }
-  const tx = cx + (tag ? 18 : 10);
-  const right = cx + cw - groupW - 8;
-  if (l.status === "cancelled") {
-    text(ctx, title(l), cx + 16, mid - 9, cw - 32 - groupW, 18, Font.boldSystemFont(13), border, "center");
-    return;
-  }
-  const roomW = 46;
-  text(ctx, title(l), tx, mid - 9, 50, 18, Font.boldSystemFont(14), col("text"), "left");
-  text(ctx, sub(l), tx + 50, mid - 7, right - roomW - (tx + 50) - 4, 15, Font.systemFont(11), col("muted"), "left");
-  text(ctx, l.room || "", right - roomW, mid - 8, roomW, 16, Font.boldSystemFont(12), l.status === "roomchanged" ? col("red") : col("text"), "right");
-}
-
-function drawList(data, family) {
+// Velký a střední widget: hlavička s logem a hodiny dne. Skládá se ze
+// „stacků“, takže se barvy samy přepínají se světlým a tmavým vzhledem.
+function listWidget(w, data, family) {
   const day = data.day;
   const st = stateOf(day);
   const size = widgetSize(family);
-  const ctx = new DrawContext();
-  ctx.size = size;
-  ctx.opaque = true;
-  ctx.respectScreenScale = true;
-  ctx.setFillColor(col("bg"));
-  ctx.fillRect(new Rect(0, 0, size.width, size.height));
+  const p = 12, W = size.width - 2 * p;
+  w.setPadding(p - 1, p, p, p);
+  w.backgroundColor = col("bg");
 
-  const p = 12;
-  // Hlavička: logo, den a vpravo pilulky (skupina, týden, offline)
-  drawLogo(ctx, p, p - 1, 22);
-  let right = size.width - p;
-  if (data.offline) right = pill(ctx, "offline", right, p, col("muted"), col("page")) - 4;
-  if (day.group) right = pill(ctx, day.group, right, p, col(day.group), col(day.group + "bg")) - 4;
-  right = pill(ctx, "týden " + day.cycleWeek, right, p, col("teal"), col("tealSoft")) - 6;
+  const head = w.addStack();
+  head.size = new Size(W, 24);
+  head.centerAlignContent();
+  head.addImage(logoImage(22)).imageSize = new Size(22, 22);
+  head.addSpacer(8);
+  const titles = head.addStack();
+  titles.layoutVertically();
   const rel = day.relative === "Dnes" || day.relative === "Zítra" ? day.relative : "";
-  const tx = p + 30;
-  if (rel) {
-    text(ctx, rel.toUpperCase(), tx, p - 2, right - tx, 13, Font.boldSystemFont(9.5), col("teal"), "left");
-    text(ctx, day.label, tx, p + 9, right - tx, 17, Font.boldSystemFont(14), col("navy"), "left");
-  } else {
-    text(ctx, day.label, tx, p + 2, right - tx, 18, Font.boldSystemFont(15), col("navy"), "left");
+  if (rel) addT(titles, rel.toUpperCase(), Font.boldSystemFont(9.5), col("teal"));
+  addT(titles, day.label, Font.boldSystemFont(rel ? 14 : 15), col("navy"));
+  head.addSpacer();
+  pill(head, "týden " + day.cycleWeek, col("teal"), col("tealSoft"));
+  if (day.group) {
+    head.addSpacer(4);
+    pill(head, day.group, col(day.group), col(day.group + "bg"));
   }
-  // Proužek v barvách Weilovky pod hlavičkou
-  const sy = p + 28, third = (size.width - 2 * p) / 3;
-  ctx.setFillColor(col("lime"));
-  ctx.fillRect(new Rect(p, sy, third, 2));
-  ctx.setFillColor(col("teal"));
-  ctx.fillRect(new Rect(p + third, sy, third, 2));
-  ctx.setFillColor(col("cyan"));
-  ctx.fillRect(new Rect(p + 2 * third, sy, third, 2));
-  let y = sy + 8;
+  if (data.offline) {
+    head.addSpacer(4);
+    pill(head, "offline", col("muted"), col("page"));
+  }
+  w.addSpacer(5);
+  w.addImage(stripeImage(W)).imageSize = new Size(W, 2);
+  w.addSpacer(6);
+  const avail = size.height - (p - 1) - p - 24 - 5 - 2 - 6;
 
   if (day.dayOverride) {
     const isEvent = day.dayOverride.kind === "event";
-    const rect = new Rect(p, y, size.width - 2 * p, size.height - y - p);
-    roundRect(ctx, rect, 12, col("bg"), isEvent ? null : col("purple"), 2);
-    if (isEvent) dashedRect(ctx, rect, 12, col("green"), 2);
-    text(ctx, isEvent ? "Celodenní akce" : "Volno", p, y + rect.height / 2 - 26, rect.width, 16, Font.systemFont(12), col("muted"), "center");
-    text(ctx, day.dayOverride.title, p + 10, y + rect.height / 2 - 8, rect.width - 20, 22, Font.boldSystemFont(16), col("text"), "center");
-    return ctx.getImage();
+    const box = w.addStack();
+    box.size = new Size(W, avail);
+    box.cornerRadius = 12;
+    box.layoutVertically();
+    box.centerAlignContent();
+    if (isEvent) box.backgroundImage = dashedImage(W, avail, 12, fixed("green"));
+    else {
+      box.borderColor = col("purple");
+      box.borderWidth = 2;
+    }
+    box.addSpacer();
+    addT(box, isEvent ? "Celodenní akce" : "Volno", Font.systemFont(12), col("muted")).centerAlignText();
+    addT(box, day.dayOverride.title, Font.boldSystemFont(16), col("text"), 2).centerAlignText();
+    box.addSpacer();
+    return;
   }
 
-  const rowH = family === "medium" ? 30 : 34, gap = 4;
-  const fit = Math.max(1, Math.floor((size.height - y - p + gap) / (rowH + gap)));
+  const rowH = family === "medium" ? 31 : 34, gap = 4;
+  const fit = Math.max(1, Math.floor((avail + gap) / (rowH + gap)));
   let list = st.lessons;
   // Když se všechno nevejde (a vždy u středního widgetu), začít probíhající / další hodinou
   if (st.isToday && (family === "medium" || list.length > fit)) {
@@ -275,13 +359,18 @@ function drawList(data, family) {
     more = list.length - (fit - 1);
     list = list.slice(0, fit - 1);
   }
-  for (const l of list) {
-    const isNow = st.current.indexOf(l) >= 0;
-    drawRow(ctx, l, p, y, size.width - 2 * p, rowH, isNow);
-    y += rowH + gap;
+  list.forEach((l, i) => {
+    if (i) w.addSpacer(gap);
+    addRow(w, l, W, rowH, st.current.indexOf(l) >= 0);
+  });
+  if (more) {
+    w.addSpacer(4);
+    const m = w.addStack();
+    m.size = new Size(W, 16);
+    m.centerAlignContent();
+    addT(m, "+ " + more + " další", Font.systemFont(11), col("muted"));
   }
-  if (more) text(ctx, "+ " + more + " další", p, y + 4, size.width - 2 * p, 16, Font.systemFont(11), col("muted"), "center");
-  return ctx.getImage();
+  w.addSpacer();
 }
 
 // ------------------------------------------------- zamčená obrazovka
@@ -406,13 +495,7 @@ function smallWidget(w, data) {
   const at = (t) => new Date(base.getTime() + mins(t) * 60000);
   if (isNow) {
     const done = Math.max(0, Math.min(1, (nowMin - mins(pick.start)) / Math.max(1, mins(pick.end) - mins(pick.start))));
-    const bar = new DrawContext();
-    bar.size = new Size(130, 5);
-    bar.opaque = false;
-    bar.respectScreenScale = true;
-    roundRect(bar, new Rect(0, 0, 130, 5), 2.5, col("orangeSoft"), null, 0);
-    roundRect(bar, new Rect(0, 0, Math.max(5, 130 * done), 5), 2.5, col("orange"), null, 0);
-    const img = w.addImage(bar.getImage());
+    const img = w.addImage(barImage(130, 5, done));
     img.imageSize = new Size(130, 5);
     w.addSpacer(5);
   }
@@ -466,7 +549,6 @@ if (!family) {
 }
 const w = new ListWidget();
 w.url = OPEN;
-w.setPadding(0, 0, 0, 0);
 
 if (data.error || !data.day) {
   w.setPadding(12, 12, 12, 12);
@@ -492,8 +574,7 @@ if (data.error || !data.day) {
 } else if (family === "small") {
   smallWidget(w, data);
 } else {
-  w.backgroundImage = drawList(data, family === "extraLarge" ? "large" : family);
-  w.addSpacer();
+  listWidget(w, data, family === "extraLarge" ? "large" : family);
 }
 if (data.day) w.refreshAfterDate = nextRefresh(data.day);
 

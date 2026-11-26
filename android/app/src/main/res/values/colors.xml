@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Barvy značky (ikona aplikace) - stejné ve světlém i tmavém režimu -->
+    <color name="brand_navy">#1B3A6B</color>
+    <!-- Barvy widgetu - tmavé varianty ve values-night -->
+    <color name="widget_bg">#FFFFFF</color>
     <color name="navy">#1B3A6B</color>
     <color name="teal">#0A7C83</color>
     <color name="cyan">#1FC2CA</color>
@@ -9,4 +13,6 @@
     <color name="orange">#FF8A00</color>
     <color name="orange_soft">#FFE6CC</color>
     <color name="red">#DB2D2D</color>
+    <color name="green">#4F9A12</color>
+    <color name="purple">#7C4DDC</color>
 </resources>

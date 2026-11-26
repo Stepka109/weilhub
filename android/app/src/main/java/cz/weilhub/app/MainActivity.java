@@ -37,10 +37,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
-        getWindow().setStatusBarColor(Renderer.PAGE);
+        getWindow().setStatusBarColor(Renderer.PAGE_LIGHT);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(Renderer.PAGE);
+        scroll.setBackgroundColor(Renderer.PAGE_LIGHT);
         scroll.setFitsSystemWindows(true);
         box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -110,8 +110,8 @@ public class MainActivity extends Activity {
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
         titles.setPadding(dp(14), 0, 0, 0);
-        titles.addView(text("WeilHub", 26, true, Renderer.NAVY));
-        titles.addView(text("Rozvrh na plochu telefonu", 14, false, Renderer.MUTED));
+        titles.addView(text("WeilHub", 26, true, Renderer.BRAND_NAVY));
+        titles.addView(text("Rozvrh na plochu telefonu", 14, false, Renderer.BRAND_MUTED));
         head.addView(titles);
         box.addView(head);
         space(22);
@@ -119,13 +119,13 @@ public class MainActivity extends Activity {
         boolean linked = Store.key(this) != null;
         LinearLayout card = card();
         if (!linked) {
-            card.addView(text("Propoj aplikaci se svým účtem", 17, true, Renderer.TEXT));
+            card.addView(text("Propoj aplikaci se svým účtem", 17, true, Renderer.BRAND_TEXT));
             card.addView(gap(8));
             card.addView(text("1. Na webu WeilHub otevři Nastavení → Widget na telefon → Android.\n"
                     + "2. Klepni na Vytvořit widget a potom na Propojit aplikaci.\n"
-                    + "3. Telefon tě vrátí sem a widget se propojí sám.", 14, false, Renderer.MUTED));
+                    + "3. Telefon tě vrátí sem a widget se propojí sám.", 14, false, Renderer.BRAND_MUTED));
             card.addView(gap(14));
-            card.addView(text("Nebo vlož klíč ručně:", 13, true, Renderer.TEXT));
+            card.addView(text("Nebo vlož klíč ručně:", 13, true, Renderer.BRAND_TEXT));
             EditText input = new EditText(this);
             input.setHint("klíč widgetu");
             input.setSingleLine(true);
@@ -146,24 +146,24 @@ public class MainActivity extends Activity {
 
         long at = Store.fetchedAt(this);
         String err = Store.error(this);
-        card.addView(text("Propojeno s účtem", 17, true, Renderer.TEXT));
+        card.addView(text("Propojeno s účtem", 17, true, Renderer.BRAND_TEXT));
         card.addView(gap(4));
         card.addView(text(at > 0 ? "Rozvrh načten " + new SimpleDateFormat("H:mm", Locale.forLanguageTag("cs")).format(new Date(at)) : "Rozvrh se načítá…",
-                14, false, Renderer.MUTED));
+                14, false, Renderer.BRAND_MUTED));
         if (err != null) {
             card.addView(gap(6));
-            card.addView(text(err, 14, true, Renderer.RED));
+            card.addView(text(err, 14, true, Renderer.BRAND_RED));
         }
         box.addView(card);
         space(18);
 
-        box.addView(text("Přidat na plochu", 13, true, Renderer.MUTED));
+        box.addView(text("Přidat na plochu", 13, true, Renderer.BRAND_MUTED));
         space(8);
         box.addView(button("Velký widget · Rozvrh", true, v -> pin(RozvrhWidget.class)));
         space(8);
         box.addView(button("Malý widget · Teď a další", true, v -> pin(TedWidget.class)));
         space(6);
-        box.addView(text("Widget jde přidat i ručně: podrž prst na ploše → Widgety → WeilHub.", 13, false, Renderer.MUTED));
+        box.addView(text("Widget jde přidat i ručně: podrž prst na ploše → Widgety → WeilHub.", 13, false, Renderer.BRAND_MUTED));
         space(18);
         box.addView(button("Obnovit rozvrh", false, v -> refresh(true)));
         space(8);
@@ -229,10 +229,10 @@ public class MainActivity extends Activity {
         b.setAllCaps(false);
         b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setTextColor(primary ? Color.WHITE : Renderer.NAVY);
+        b.setTextColor(primary ? Color.WHITE : Renderer.BRAND_NAVY);
         b.setStateListAnimator(null);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(primary ? Renderer.TEAL : Color.WHITE);
+        bg.setColor(primary ? Renderer.BRAND_TEAL : Color.WHITE);
         bg.setCornerRadius(dp(16));
         if (!primary) bg.setStroke(dp(1), 0xFFE0E8EC);
         b.setBackground(bg);

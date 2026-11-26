@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Velky widget: obrazek ve svetle variante (tmava je v layout-night) -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
@@ -9,4 +10,11 @@
         android:layout_height="match_parent"
         android:contentDescription="@string/widget_list"
         android:scaleType="fitXY" />
+    <ImageView
+        android:id="@+id/img_dark"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_list"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
 </FrameLayout>

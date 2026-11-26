@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.View;
@@ -59,10 +60,18 @@ final class WidgetUpdater {
             v = small(c, day, message);
         } else {
             v = new RemoteViews(c.getPackageName(), R.layout.widget_list);
-            v.setImageViewBitmap(R.id.img, Renderer.list(c, day, message, offline, wDp, hDp));
+            // Obě varianty; telefon sám ukáže tu, která odpovídá světlému / tmavému vzhledu
+            v.setImageViewBitmap(R.id.img, Renderer.list(c, day, message, offline, wDp, hDp, false));
+            v.setImageViewBitmap(R.id.img_dark, Renderer.list(c, day, message, offline, wDp, hDp, true));
         }
         v.setOnClickPendingIntent(R.id.root, linked ? openWeb(c) : openApp(c));
         m.updateAppWidget(id, v);
+    }
+
+    /** Barva textu ze zdrojů – na Androidu 12+ se přepne i se světlým / tmavým vzhledem. */
+    private static void color(Context c, RemoteViews v, int id, int res) {
+        if (Build.VERSION.SDK_INT >= 31) v.setColorStateList(id, "setTextColor", res);
+        else v.setTextColor(id, c.getColor(res));
     }
 
     private static RemoteViews small(Context c, Model.Day day, String message) {
@@ -73,9 +82,9 @@ final class WidgetUpdater {
         v.setTextViewText(R.id.next, "");
         v.setTextViewText(R.id.room, "");
         v.setTextViewText(R.id.detail, "");
-        v.setTextColor(R.id.label, Renderer.TEAL);
-        v.setTextColor(R.id.code, Renderer.NAVY);
-        v.setTextColor(R.id.room, Renderer.TEAL);
+        color(c, v, R.id.label, R.color.teal);
+        color(c, v, R.id.code, R.color.navy);
+        color(c, v, R.id.room, R.color.teal);
 
         if (day == null) {
             v.setTextViewText(R.id.label, "WEILHUB");
@@ -90,7 +99,7 @@ final class WidgetUpdater {
         if (day.ovKind != null && !day.ovKind.isEmpty()) {
             boolean event = "event".equals(day.ovKind);
             v.setTextViewText(R.id.label, (rel + " · " + (event ? "akce" : "volno")).toUpperCase());
-            v.setTextColor(R.id.label, event ? Renderer.GREEN : Renderer.PURPLE);
+            color(c, v, R.id.label, event ? R.color.green : R.color.purple);
             v.setTextViewText(R.id.code, day.ovTitle);
             v.setTextViewTextSize(R.id.code, android.util.TypedValue.COMPLEX_UNIT_SP, 18);
             v.setTextViewText(R.id.room, day.ovRoom);
@@ -106,18 +115,18 @@ final class WidgetUpdater {
         boolean isNow = !st.current.isEmpty();
         String when = isNow ? "Teď · " : st.isToday ? "Další · " : rel + " · ";
         v.setTextViewText(R.id.label, (when + pick.num() + " hodina").toUpperCase());
-        if (isNow) v.setTextColor(R.id.label, Renderer.ORANGE);
+        if (isNow) color(c, v, R.id.label, R.color.orange);
 
         boolean cancelled = "cancelled".equals(pick.status);
         if (cancelled) {
             v.setTextViewText(R.id.code, pick.code.isEmpty() ? "Hodina" : pick.code);
-            v.setTextColor(R.id.code, Renderer.RED);
+            color(c, v, R.id.code, R.color.red);
             v.setTextViewText(R.id.room, "odpadá");
-            v.setTextColor(R.id.room, Renderer.RED);
+            color(c, v, R.id.room, R.color.red);
         } else {
             v.setTextViewText(R.id.code, pick.title());
             v.setTextViewText(R.id.room, pick.room);
-            if ("roomchanged".equals(pick.status)) v.setTextColor(R.id.room, Renderer.RED);
+            if ("roomchanged".equals(pick.status)) color(c, v, R.id.room, R.color.red);
             v.setTextViewText(R.id.detail, pick.sub());
         }
 
@@ -135,7 +144,7 @@ final class WidgetUpdater {
             v.setViewVisibility(R.id.timer, View.VISIBLE);
             v.setChronometer(R.id.timer, base, null, true);
             v.setChronometerCountDown(R.id.timer, true);
-            v.setTextColor(R.id.timer, isNow ? Renderer.ORANGE : Renderer.TEAL);
+            color(c, v, R.id.timer, isNow ? R.color.orange : R.color.teal);
         } else {
             v.setTextViewText(R.id.timer_label, "začíná v " + pick.start);
         }
